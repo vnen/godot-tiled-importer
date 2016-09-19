@@ -28,6 +28,10 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000;
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000;
 
+const path_to_save_data = "res://data.json"
+
+const parser_error_message = "Error parsing .tmx file"
+
 var data = {}
 var options = {}
 var tilesets = []
@@ -43,15 +47,19 @@ func init(p_source, p_options):
 	options.basedir = source.get_base_dir()
 
 func get_data():
-	var f = File.new()
-	if f.open(source, File.READ) != OK:
-		return "Couldn't open source file"
 
-	var tiled_raw_data = f.get_as_text()
-	f.close()
+	if source.extension() == "json":
+		var f = File.new()
+		if f.open(source, File.READ) != OK:
+			return "Couldn't open source file"
 
-	if data.parse_json(tiled_raw_data) != OK:
-		return "Couldn't parse the source file"
+		var tiled_raw_data = f.get_as_text()
+		f.close()
+
+		if data.parse_json(tiled_raw_data) != OK:
+			return "Couldn't parse the source file"
+	else:
+		data = _tmx_to_dict(source)
 
 	return data;
 
@@ -346,3 +354,164 @@ func _parse_base64_layer(data):
 		result.push_back(num)
 
 	return result
+
+
+# Read a .tmx file and build a dictionary in the same format as Tiled .json
+# This helps normalizing the data and using a single builder
+func _tmx_to_dict(path):
+
+	var parser = XMLParser.new()
+	var err = parser.open(path)
+	if err != OK:
+		return "Couldn't open .tmx file %s" % [path]
+
+	while parser.get_node_type() != XMLParser.NODE_ELEMENT:
+		err = parser.read()
+		if err != OK:
+			return "Error parsing .tmx file %s" % [path]
+
+	if parser.get_node_name() != "map":
+		return "Error parsing .tmx file %s" % [path]
+
+	var data = _attributes_to_dict(parser)
+	data.tilesets = []
+	data.layers = []
+
+	err = parser.read()
+	if err != OK:
+		return parser_error_message
+
+	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "map":
+		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
+			err = parser.read()
+			if err != OK:
+				return "Error parsing .tmx file %s" % [path]
+
+			print("type ", parser.get_node_type(), " name: ", parser.get_node_name() if parser.get_node_type() != XMLParser.NODE_TEXT else "text")
+
+		if parser.get_node_name() == "tileset":
+			var tileset_data = _attributes_to_dict(parser)
+			print("I'm in tileset ", tileset_data)
+			tileset_data.tiles = {}
+
+			while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "tileset":
+				while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
+					err = parser.read()
+					if err != OK:
+						return "Error parsing .tmx file %s" % [path]
+				if parser.get_node_name() == "image":
+					for i in parser.get_attribute_count():
+						if parser.get_attribute_name(i) == "source":
+							tileset_data.image = parser.get_attribute_value(i)
+						elif parser.get_attribute_name(i) == "width":
+							tileset_data.imagewidth = int(parser.get_attribute_value(i))
+						elif parser.get_attribute_name(i) == "height":
+							tileset_data.imageheight = int(parser.get_attribute_value(i))
+				elif parser.get_node_name() == "tile":
+					print("parsing tile")
+					tileset_data.tiles[parser.get_named_attribute_value("id")] = _parse_tile_data(parser)
+
+				err = parser.read()
+				if err != OK:
+					return parser_error_message
+
+			data.tilesets.push_back(tileset_data)
+		elif parser.get_node_name() == "layer":
+			pass
+
+		err = parser.read()
+		if err != OK:
+			return parser_error_message
+
+	print("got tmx data ", data)
+
+	var f = File.new()
+	f.open(path_to_save_data, File.WRITE)
+	f.store_string(data.to_json())
+	f.close()
+
+	return data
+
+func _parse_tile_data(parser):
+	var err = OK
+	var data = {}
+
+	if parser.is_empty():
+		return data
+
+	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "tile":
+		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
+			err = parser.read()
+			if err != OK:
+				return parser_error_message
+		if parser.get_node_name() == "objectgroup":
+			var obj_group = {}
+			obj_group.objects = []
+			if parser.is_empty():
+				obj_group = _attributes_to_dict(parser)
+				obj_group.objects = []
+			else:
+				while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "objectgroup":
+					while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
+						err = parser.read()
+						if err != OK:
+							return parser_error_message
+
+					obj_group.objects.push_back(_parse_object(parser))
+
+					err = parser.read()
+					if err != OK:
+						return parser_error_message
+
+			data.objectgroup = obj_group
+
+		err = parser.read()
+		if err != OK:
+			return parser_error_message
+
+	print("got tile data ", data)
+
+	return data
+
+
+func _parse_object(parser):
+	parser = XMLParser.new()
+
+	var err = OK
+	var obj_data = _attributes_to_dict(parser)
+
+	if parser.is_empty():
+		return data
+
+	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "object":
+		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
+			err = parser.read()
+			if err != OK:
+				return parser_error_message
+		if parser.get_node_name() == "polyline" or parser.get_node_name() == "polygon":
+			var points = []
+			var points_raw = parser.get_named_attribute_value("points").split(" ")
+
+			for pr in points_raw:
+				points.push_back({
+					"x": float(pr.split(",")[0]),
+					"y": float(pr.split(",")[1]),
+				})
+
+			data[parser.get_node_name()] = points
+
+		err = parser.read()
+		if err != OK:
+			return parser_error_message
+
+	print("got object data ", obj_data)
+
+	return obj_data
+
+
+func _attributes_to_dict(parser):
+	data = {}
+	for i in range(parser.get_attribute_count()):
+		var attr = parser.get_attribute_name(i)
+		data[attr] = parser.get_attribute_value(i)
+	return data

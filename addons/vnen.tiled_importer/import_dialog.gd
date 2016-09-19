@@ -116,8 +116,9 @@ func validate_options():
 
 	if not origin_path.is_abs_path():
 		return "Origin path must be absolute."
-	if not origin_path.to_lower().ends_with(".json"):
-		return "Origin must be a JSON file."
+	if not (origin_path.to_lower().ends_with(".json") or \
+	        origin_path.to_lower().ends_with(".tmx")):
+		return "Origin must be a JSON or TMX file."
 	if not dir.file_exists(origin_path):
 		return "Origin file does not exist."
 
