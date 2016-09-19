@@ -53,4 +53,15 @@ func import(path, metadata):
 	if err != "OK":
 		return err
 
+	var scene = tiled_map.get_scene()
+
+	var packed_scene = PackedScene.new()
+	err = packed_scene.pack(scene)
+	if err != OK:
+		return "Error packing scene"
+
+	err = ResourceSaver.save(path, packed_scene, ResourceSaver.FLAG_CHANGE_PATH)
+	if err != OK:
+		return "Error saving scene"
+
 	return "OK... so far..."
