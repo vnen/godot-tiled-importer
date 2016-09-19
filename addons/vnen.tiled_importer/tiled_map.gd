@@ -6,6 +6,7 @@ var options = {}
 var tilesets = []
 var scene = null
 var source = ""
+var tile_id_mapping = {}
 
 func init(p_source, p_options):
 	source = p_source
@@ -106,7 +107,21 @@ func build():
 				gid += 1
 
 		tileset.set_name(name)
+
+		if not options.embed:
+			var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + name + ".res")
+			var err = ResourceSaver.save(tileset_path, tileset, ResourceSaver.FLAG_CHANGE_PATH)
+			if err != OK:
+				return "Couldn't save TileSet %s" % [name]
+			tileset.take_over_path(tileset_path)
+
 		tilesets.push_back(tileset)
+
+		tile_id_mapping[name] = {
+			"firstgid": firstgid,
+			"tilecount": tilecount,
+			"tileset": tileset,
+		}
 
 	return "OK"
 
@@ -115,3 +130,12 @@ func get_tilesets():
 
 func get_scene():
 	return scene
+
+# Get the tileset based on the global tile id
+func _tileset_from_gid(gid):
+	for map_id in tile_id_mapping:
+		var map = tile_id_mapping[map_id]
+		if gid >= map.firstgid and gid < (map.firstgid + map.tilecount):
+			return map.tileset
+
+	return null

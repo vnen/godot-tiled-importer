@@ -53,11 +53,4 @@ func import(path, metadata):
 	if err != "OK":
 		return err
 
-	if not options.embed:
-		var tileset_base = path.get_base_dir().plus_file(options.rel_path)
-		for ts in tiled_map.get_tilesets():
-			var err = ResourceSaver.save(tileset_base.plus_file(ts.get_name() + ".res"), ts)
-			if err != OK:
-				return "Couldn't save TileSet %s" % [ts.name]
-
 	return "OK... so far..."
