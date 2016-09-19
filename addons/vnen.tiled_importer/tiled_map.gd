@@ -31,12 +31,9 @@ func get_data():
 	if data.parse_json(tiled_raw_data) != OK:
 		return "Couldn't parse the source file"
 
-	print("data 1 ", data.height)
-
 	return data;
 
 func build():
-	print("data 2 ", data.height)
 	# Validate before doing anything
 	if not data.has("tilesets"):
 		return 'Invalid Tiled data: missing "tilesets" key.'
@@ -95,6 +92,7 @@ func build():
 			if not dir.file_exists(image_path):
 				return 'Referenced image "%s" not found' % [image_path]
 			image.load(image_path)
+			image.set_flags(0)
 
 			if not options.embed:
 				var target_image = options.target.get_base_dir() \
@@ -151,9 +149,19 @@ func build():
 			return 'Invalid Tiled data: missing "data" key on layer %s.' % [name]
 		var layer_data = l.data
 
+		var opacity = 1.0
+		var visible = true
+
+		if l.has("opacity"):
+			opacity = float(l.opacity)
+		if l.has("visible"):
+			visible = bool(l.visible)
+
 		var tilemap = TileMap.new()
 		tilemap.set_name(name)
 		tilemap.set_cell_size(cell_size)
+		tilemap.set_opacity(opacity)
+		tilemap.set_hidden(not visible)
 
 		var offset = Vector2()
 		if l.has("offsetx") and l.has("offsety"):
@@ -186,8 +194,6 @@ func build():
 			var cell_pos = Vector2(count % int(map_size.width), int(count / map_size.width))
 			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_h, flipped_d)
 
-			#print ("setting %s gid %d at " % [name, gid], cell_pos)
-
 			count += 1
 
 		scene.add_child(tilemap)
@@ -206,7 +212,6 @@ func _tileset_from_gid(gid):
 	for map_id in tile_id_mapping:
 		var map = tile_id_mapping[map_id]
 		if gid >= map.firstgid and gid < (map.firstgid + map.tilecount):
-			#print("found tileset %s for gid %d" % [map_id, gid])
 			return map.tileset
 
 	return null
