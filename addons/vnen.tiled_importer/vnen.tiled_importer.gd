@@ -23,11 +23,18 @@
 tool
 extends EditorPlugin
 
+var import_plugin = null
+
 func get_name():
 	return "Tiled Map Importer"
 
+
 func _enter_tree():
-	pass
+	import_plugin = preload("tiled_importer_plugin.gd").new()
+	import_plugin.config(get_base_control())
+	add_import_plugin(import_plugin)
+
 
 func _exit_tree():
-	pass
+	remove_import_plugin(import_plugin)
+	import_plugin = null
