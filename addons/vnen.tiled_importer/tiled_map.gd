@@ -163,6 +163,9 @@ func build():
 	scene.set_name(options.target.basename())
 
 	for l in data.layers:
+		if l.has("compression"):
+			return 'Tiled compressed format is not supported. Change your Map properties to a format without compression.'
+
 		if not l.has("name"):
 			return 'Invalid Tiled data: missing "name" key on layer.'
 		var name = l.name
@@ -170,6 +173,11 @@ func build():
 		if not l.has("data"):
 			return 'Invalid Tiled data: missing "data" key on layer %s.' % [name]
 		var layer_data = l.data
+
+		if "encoding" in l:
+			if l.encoding != "base64":
+				return 'Unsupported layer data encoding. Use Base64 or no enconding.'
+			layer_data = _parse_base64_layer(l.data)
 
 		var opacity = 1.0
 		var visible = true
@@ -301,3 +309,18 @@ func _shape_from_object(obj):
 			shape.set_extents(size / 2)
 
 	return shape
+
+func _parse_base64_layer(data):
+	var decoded = Marshalls.base64_to_raw(data)
+
+	var result = []
+
+	for i in range(0, decoded.size(), 4):
+
+		var num = (decoded[i]) | \
+		          (decoded[i + 1] << 8) | \
+		          (decoded[i + 2] << 16) | \
+		          (decoded[i + 3] << 24)
+		result.push_back(num)
+
+	return result
