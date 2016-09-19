@@ -116,14 +116,9 @@ func build():
 				tileset.tile_set_texture(gid, image)
 				tileset.tile_set_region(gid, region)
 
-				var rel_id = str(gid - firstgid + 1)
-
-				print(name)
-				print("rel_id: %s, gid: %d, first: %d" % [rel_id, gid, firstgid])
-				print("has: " , "yes" if ts.has(rel_id) else "no")
+				var rel_id = str(gid - firstgid)
 
 				if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id]:
-					print("loading shapes for %s: " % [name], gid, ", rel: ", rel_id)
 					for obj in ts.tiles[rel_id].objectgroup.objects:
 						var shape = _shape_from_object(obj)
 
@@ -251,11 +246,9 @@ func _shape_from_object(obj):
 		var vertices = Vector2Array()
 
 		if "polygon" in obj:
-			print("polygon ", obj.type)
 			for point in obj.polygon:
 				vertices.push_back(Vector2(int(point.x), int(point.y)))
 		else:
-			print("polyline ", obj.type)
 			for point in obj.polyline:
 				vertices.push_back(Vector2(int(point.x), int(point.y)))
 
@@ -265,13 +258,12 @@ func _shape_from_object(obj):
 		elif obj.type == "occluder":
 			shape = OccluderPolygon2D.new()
 			shape.set_polygon(vertices)
-			shape.set_closed(true)
+			shape.set_closed("polygon" in obj)
 		else:
 			shape = ConcavePolygonShape2D.new()
 			shape.set_segments(vertices)
 
 	elif "ellipse" in obj:
-		print("ellipse ", obj.type)
 		if obj.type == "navigation" or obj.type == "occluder":
 			return "Ellipse shapes are not supported as navigation or occluder. Use a polygon/polyline or a rectangle."
 
@@ -288,7 +280,6 @@ func _shape_from_object(obj):
 
 	else:
 		# Rectangle
-		print("rectangle ", obj.type)
 		var size = Vector2(int(obj.width), int(obj.height))
 
 		if obj.type == "navigation" or obj.type == "occluder":
