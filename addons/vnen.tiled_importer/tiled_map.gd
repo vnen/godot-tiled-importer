@@ -116,6 +116,33 @@ func build():
 				tileset.tile_set_texture(gid, image)
 				tileset.tile_set_region(gid, region)
 
+				var rel_id = str(gid - firstgid + 1)
+
+				print(name)
+				print("rel_id: %s, gid: %d, first: %d" % [rel_id, gid, firstgid])
+				print("has: " , "yes" if ts.has(rel_id) else "no")
+
+				if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id]:
+					print("loading shapes for %s: " % [name], gid, ", rel: ", rel_id)
+					for obj in ts.tiles[rel_id].objectgroup.objects:
+						var shape = _shape_from_object(obj)
+
+						if typeof(shape) == TYPE_STRING:
+							return "Error on shape data in tileset %s:\n%s" % [name, shape]
+
+						var offset = Vector2(int(obj.x), int(obj.y))
+						offset += Vector2(int(obj.width) / 2, int(obj.height) / 2)
+
+						if obj.type == "navigation":
+							tileset.tile_set_navigation_polygon(gid, shape)
+							tileset.tile_set_navigation_polygon_offset(gid, offset)
+						elif obj.type == "occluder":
+							tileset.tile_set_light_occluder(gid, shape)
+							tileset.tile_set_occluder_offset(gid, offset)
+						else:
+							tileset.tile_set_shape(gid, shape)
+							tileset.tile_set_shape_offset(gid, offset)
+
 				gid += 1
 
 		tileset.set_name(name)
@@ -215,3 +242,71 @@ func _tileset_from_gid(gid):
 			return map.tileset
 
 	return null
+
+# Get a shape based on the object data
+func _shape_from_object(obj):
+	var shape = "No shape created. That really shouldn't happen..."
+
+	if "polygon" in obj or "polyline" in obj:
+		var vertices = Vector2Array()
+
+		if "polygon" in obj:
+			print("polygon ", obj.type)
+			for point in obj.polygon:
+				vertices.push_back(Vector2(int(point.x), int(point.y)))
+		else:
+			print("polyline ", obj.type)
+			for point in obj.polyline:
+				vertices.push_back(Vector2(int(point.x), int(point.y)))
+
+		if obj.type == "navigation":
+			shape = NavigationPolygon.new()
+			shape.set_vertices(vertices)
+		elif obj.type == "occluder":
+			shape = OccluderPolygon2D.new()
+			shape.set_polygon(vertices)
+			shape.set_closed(true)
+		else:
+			shape = ConcavePolygonShape2D.new()
+			shape.set_segments(vertices)
+
+	elif "ellipse" in obj:
+		print("ellipse ", obj.type)
+		if obj.type == "navigation" or obj.type == "occluder":
+			return "Ellipse shapes are not supported as navigation or occluder. Use a polygon/polyline or a rectangle."
+
+		var w = int(obj.width)
+		var h = int(obj.height)
+
+		if w == h:
+			shape = CircleShape2D.new()
+			shape.set_radius(w/2)
+		else:
+			shape = CapsuleShape2D.new()
+			shape.set_radius(w/2)
+			shape.set_height(h/2)
+
+	else:
+		# Rectangle
+		print("rectangle ", obj.type)
+		var size = Vector2(int(obj.width), int(obj.height))
+
+		if obj.type == "navigation" or obj.type == "occluder":
+			var vertices = Vector2Array([
+				Vector2(0, 0),
+				Vector2(size.width, 0),
+				size,
+				Vector2(0, size.height),
+			])
+
+			if obj.type == "navigation":
+				shape = NavigationPolygon.new()
+				shape.set_vertices(vertices)
+			else:
+				shape = OccluderPolygon2D.new()
+				shape.set_polygon(vertices)
+		else:
+			shape = RectangleShape2D.new()
+			shape.set_extents(size / 2)
+
+	return shape
