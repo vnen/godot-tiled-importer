@@ -148,7 +148,8 @@ func build():
 
 				var rel_id = str(gid - firstgid)
 
-				if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id]:
+				if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
+				                 and "objects" in ts.tiles[rel_id].objectgroup:
 					for obj in ts.tiles[rel_id].objectgroup.objects:
 						var shape = _shape_from_object(obj)
 
@@ -371,7 +372,7 @@ func _tmx_to_dict(path):
 			return "Error parsing .tmx file %s" % [path]
 
 	if parser.get_node_name() != "map":
-		return "Error parsing .tmx file %s" % [path]
+		return 'Error parsing .tmx file %s. Expected "map" element' % [path]
 
 	var data = _attributes_to_dict(parser)
 	data.tilesets = []
@@ -381,47 +382,34 @@ func _tmx_to_dict(path):
 	if err != OK:
 		return parser_error_message
 
-	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "map":
-		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
-			err = parser.read()
-			if err != OK:
-				return "Error parsing .tmx file %s" % [path]
+	var tileset_data = {}
 
-			print("type ", parser.get_node_type(), " name: ", parser.get_node_name() if parser.get_node_type() != XMLParser.NODE_TEXT else "text")
+	while err == OK:
+		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+			if parser.get_node_name() == "map":
+				break
+			elif parser.get_node_name() == "tileset":
+				data.tilesets.push_back(tileset_data)
+				tileset_data = {}
 
-		if parser.get_node_name() == "tileset":
-			var tileset_data = _attributes_to_dict(parser)
-			print("I'm in tileset ", tileset_data)
-			tileset_data.tiles = {}
+		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+			if parser.get_node_name() == "tileset":
+				tileset_data = _attributes_to_dict(parser)
+				tileset_data.tiles = {}
 
-			while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "tileset":
-				while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
-					err = parser.read()
-					if err != OK:
-						return "Error parsing .tmx file %s" % [path]
-				if parser.get_node_name() == "image":
-					for i in parser.get_attribute_count():
-						if parser.get_attribute_name(i) == "source":
-							tileset_data.image = parser.get_attribute_value(i)
-						elif parser.get_attribute_name(i) == "width":
-							tileset_data.imagewidth = int(parser.get_attribute_value(i))
-						elif parser.get_attribute_name(i) == "height":
-							tileset_data.imageheight = int(parser.get_attribute_value(i))
-				elif parser.get_node_name() == "tile":
-					print("parsing tile")
-					tileset_data.tiles[parser.get_named_attribute_value("id")] = _parse_tile_data(parser)
+			elif parser.get_node_name() == "image":
+				var attr = _attributes_to_dict(parser)
+				tileset_data.image = attr.source
+				tileset_data.imagewidth = attr.width
+				tileset_data.imageheight = attr.height
 
-				err = parser.read()
-				if err != OK:
-					return parser_error_message
+			elif parser.get_node_name() == "tile":
+				var attr = _attributes_to_dict(parser)
+				var tile_data = _parse_tile_data(parser)
 
-			data.tilesets.push_back(tileset_data)
-		elif parser.get_node_name() == "layer":
-			pass
+				tileset_data.tiles[attr.id] = tile_data
 
 		err = parser.read()
-		if err != OK:
-			return parser_error_message
 
 	print("got tmx data ", data)
 
@@ -432,6 +420,7 @@ func _tmx_to_dict(path):
 
 	return data
 
+
 func _parse_tile_data(parser):
 	var err = OK
 	var data = {}
@@ -439,79 +428,95 @@ func _parse_tile_data(parser):
 	if parser.is_empty():
 		return data
 
-	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "tile":
-		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
-			err = parser.read()
-			if err != OK:
-				return parser_error_message
-		if parser.get_node_name() == "objectgroup":
-			var obj_group = {}
-			obj_group.objects = []
-			if parser.is_empty():
+	err = parser.read()
+
+	var obj_group = {}
+
+	while err == OK:
+
+		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+			if parser.get_node_name() == "tile":
+				return data
+			elif parser.get_node_name() == "objectgroup":
+				data.objectgroup = obj_group
+
+		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+			if parser.get_node_name() == "objectgroup":
 				obj_group = _attributes_to_dict(parser)
-				obj_group.objects = []
-			else:
-				while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "objectgroup":
-					while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
-						err = parser.read()
-						if err != OK:
-							return parser_error_message
+				for attr in ["width", "height", "offsetx", "offsety"]:
+					if not attr in obj_group:
+						data[attr] = 0
+				if not "opacity" in data:
+					data.opacity = 1
+				if not "visible" in data:
+					data.visible = true
 
-					obj_group.objects.push_back(_parse_object(parser))
-
-					err = parser.read()
-					if err != OK:
-						return parser_error_message
-
-			data.objectgroup = obj_group
+				print("obj group ", obj_group)
+				if parser.is_empty():
+					data.objectgroup = obj_group
+			elif parser.get_node_name() == "object":
+				if not "objects" in obj_group:
+					obj_group.objects = []
+				var obj = _parse_object(parser)
+				obj_group.objects.push_back(obj)
 
 		err = parser.read()
-		if err != OK:
-			return parser_error_message
-
-	print("got tile data ", data)
 
 	return data
 
 
 func _parse_object(parser):
-	parser = XMLParser.new()
-
 	var err = OK
-	var obj_data = _attributes_to_dict(parser)
+	var data = _attributes_to_dict(parser)
 
-	if parser.is_empty():
-		return data
-
-	while parser.get_node_type() != XMLParser.NODE_ELEMENT_END and parser.get_node_name() != "object":
-		while parser.get_node_type() != XMLParser.NODE_ELEMENT and parser.get_node_type() != XMLParser.NODE_ELEMENT_END:
-			err = parser.read()
-			if err != OK:
-				return parser_error_message
-		if parser.get_node_name() == "polyline" or parser.get_node_name() == "polygon":
-			var points = []
-			var points_raw = parser.get_named_attribute_value("points").split(" ")
-
-			for pr in points_raw:
-				points.push_back({
-					"x": float(pr.split(",")[0]),
-					"y": float(pr.split(",")[1]),
-				})
-
-			data[parser.get_node_name()] = points
-
+	if not parser.is_empty():
 		err = parser.read()
-		if err != OK:
-			return parser_error_message
+		while err == OK:
 
-	print("got object data ", obj_data)
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name() == "object":
+					break
 
-	return obj_data
+			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name() == "ellipse":
+					data.ellipse = true
+				elif parser.get_node_name() == "polygon" or parser.get_node_name() == "polyline":
+					var points = []
+					var points_raw = parser.get_named_attribute_value("points").split(" ")
+
+					for pr in points_raw:
+						points.push_back({
+							"x": float(pr.split(",")[0]),
+							"y": float(pr.split(",")[1]),
+						})
+
+					data[parser.get_node_name()] = points
+
+			err = parser.read()
+
+	for attr in ["width", "height", "x", "y", "rotation"]:
+		if not attr in data:
+			data[attr] = 0
+	if not "type" in data:
+		data.type = ""
+	if not "visible" in data:
+		data.visible = true
+
+	return data
 
 
 func _attributes_to_dict(parser):
-	data = {}
+	var data = {}
 	for i in range(parser.get_attribute_count()):
 		var attr = parser.get_attribute_name(i)
-		data[attr] = parser.get_attribute_value(i)
+		var val = parser.get_attribute_value(i)
+		if val.is_valid_integer():
+			val = int(val)
+		elif val.is_valid_float():
+			val = float(val)
+		elif val == "true":
+			val = true
+		elif val == "false":
+			val = false
+		data[attr] = val
 	return data
