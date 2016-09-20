@@ -55,6 +55,7 @@ func import(path, metadata):
 	var tiled_map = TiledMap.new()
 
 	var options = {
+		"single_tileset": metadata.get_option("single_tileset"),
 		"embed": metadata.get_option("embed"),
 		"rel_path": metadata.get_option("rel_path"),
 		"target": path,
@@ -86,4 +87,4 @@ func import(path, metadata):
 	if err != OK:
 		return "Error saving scene"
 
-	return "OK... so far..."
+	return "OK"

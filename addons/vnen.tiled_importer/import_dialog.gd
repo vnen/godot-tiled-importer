@@ -54,6 +54,13 @@ func _ready():
 		initialized = true
 
 	options = {
+		"single_tileset": {
+			"name": "Single TileSet",
+			"tooltip": "Mix all Tiled TileSets into a single Godot resource. Needed if your layers uses more than one tileset each.",
+			"type": TreeItem.CELL_MODE_CHECK,
+			"text": "On",
+			"default": true,
+		},
 		"embed": {
 			"name": "Embed resources",
 			"tooltip": "Save the resources (images, tilesets) embedded in the scene, as opposed to saving as external files.",
@@ -183,3 +190,6 @@ func _on_ImportTilemap_confirmed():
 	if err != "OK":
 		alert.set_text("Error when importing:\n%s" % [err])
 		alert.popup_centered_minsize()
+		return
+
+	hide()

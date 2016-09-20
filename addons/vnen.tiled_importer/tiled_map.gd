@@ -28,8 +28,6 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
-const path_to_save_data = "res://data.json"
-
 const parser_error_message = "Error parsing .tmx file"
 
 var data = {}
@@ -80,9 +78,18 @@ func build():
 	var map_size = Vector2(int(data.width), int(data.height))
 	var cell_size = Vector2(int(data.tilewidth), int(data.tileheight))
 
+	var single_tileset = null
+
+	if options.single_tileset:
+		single_tileset = TileSet.new()
+
 	# Make tilesets
 	for ts in data.tilesets:
-		var tileset = TileSet.new()
+		var tileset = null
+		if options.single_tileset:
+			tileset = single_tileset
+		else:
+			tileset = TileSet.new()
 
 		var spacing = 0
 		var margin = 0
@@ -173,20 +180,35 @@ func build():
 
 		tileset.set_name(name)
 
-		if not options.embed:
-			var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + name + ".res")
-			var err = ResourceSaver.save(tileset_path, tileset, ResourceSaver.FLAG_CHANGE_PATH)
-			if err != OK:
-				return "Couldn't save TileSet %s" % [name]
-			tileset.take_over_path(tileset_path)
+		if not options.single_tileset:
+			if not options.embed:
+				var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + name + ".res")
+				var err = ResourceSaver.save(tileset_path, tileset, ResourceSaver.FLAG_CHANGE_PATH)
+				if err != OK:
+					return "Couldn't save TileSet %s" % [name]
+				tileset.take_over_path(tileset_path)
 
-		tilesets.push_back(tileset)
+			tilesets.push_back(tileset)
 
-		tile_id_mapping[name] = {
-			"firstgid": firstgid,
-			"tilecount": tilecount,
-			"tileset": tileset,
-		}
+			tile_id_mapping[name] = {
+				"firstgid": firstgid,
+				"tilecount": tilecount,
+				"tileset": tileset,
+			}
+
+	if options.single_tileset and not options.embed:
+		var base = options.target.substr(options.target.find_last('/'), options.target.length()).basename()
+
+		single_tileset.set_name(base)
+
+		var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + base + ".res")
+		var err = ResourceSaver.save(tileset_path, single_tileset, ResourceSaver.FLAG_CHANGE_PATH)
+		if err != OK:
+			return "Couldn't save TileSet"
+		single_tileset.take_over_path(tileset_path)
+
+	if options.single_tileset:
+		tilesets = [single_tileset]
 
 	# TileSets done, creating the target scene
 
@@ -270,6 +292,9 @@ func get_scene():
 
 # Get the tileset based on the global tile id
 func _tileset_from_gid(gid):
+	if options.single_tileset:
+		return tilesets[0]
+
 	for map_id in tile_id_mapping:
 		var map = tile_id_mapping[map_id]
 		if gid >= map.firstgid and gid < (map.firstgid + map.tilecount):
@@ -414,11 +439,6 @@ func _tmx_to_dict(path):
 
 
 		err = parser.read()
-
-	var f = File.new()
-	f.open(path_to_save_data, File.WRITE)
-	f.store_string(data.to_json())
-	f.close()
 
 	return data
 
