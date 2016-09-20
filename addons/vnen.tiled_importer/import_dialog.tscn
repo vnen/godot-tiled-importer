@@ -12,7 +12,7 @@ size_flags/vertical = 2
 margin/left = 0.0
 margin/top = 0.0
 margin/right = 513.0
-margin/bottom = 227.0
+margin/bottom = 237.0
 popup/exclusive = false
 window/title = "Import TileMap from Tiled"
 dialog/hide_on_ok = false
@@ -177,7 +177,7 @@ size_flags/vertical = 3
 margin/left = 0.0
 margin/top = 92.0
 margin/right = 493.0
-margin/bottom = 177.0
+margin/bottom = 187.0
 
 [node name="ErrorAlert" type="AcceptDialog" parent="."]
 
