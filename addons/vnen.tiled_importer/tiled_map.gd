@@ -24,9 +24,9 @@ tool
 extends Reference
 
 # http://doc.mapeditor.org/reference/tmx-map-format/#tile-flipping
-const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
-const FLIPPED_VERTICALLY_FLAG   = 0x40000000;
-const FLIPPED_DIAGONALLY_FLAG   = 0x20000000;
+const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
+const FLIPPED_VERTICALLY_FLAG   = 0x40000000
+const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
 const path_to_save_data = "res://data.json"
 
@@ -409,9 +409,11 @@ func _tmx_to_dict(path):
 
 				tileset_data.tiles[attr.id] = tile_data
 
-		err = parser.read()
+			elif parser.get_node_name() == "layer":
+				 data.layers.push_back(_parse_layer(parser))
 
-	print("got tmx data ", data)
+
+		err = parser.read()
 
 	var f = File.new()
 	f.open(path_to_save_data, File.WRITE)
@@ -450,8 +452,6 @@ func _parse_tile_data(parser):
 					data.opacity = 1
 				if not "visible" in data:
 					data.visible = true
-
-				print("obj group ", obj_group)
 				if parser.is_empty():
 					data.objectgroup = obj_group
 			elif parser.get_node_name() == "object":
@@ -501,6 +501,48 @@ func _parse_object(parser):
 		data.type = ""
 	if not "visible" in data:
 		data.visible = true
+
+	return data
+
+
+func _parse_layer(parser):
+	var err = OK
+	var data = _attributes_to_dict(parser)
+
+	if not parser.is_empty():
+		err = parser.read()
+
+		while err == OK:
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name() == "layer":
+					break
+
+			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name() == "data":
+					var attr = _attributes_to_dict(parser)
+
+					if "compression" in attr:
+						data.compression = attr.compression
+
+					if "encoding" in attr:
+						parser.read()
+
+						if attr.encoding != "csv":
+							data.encoding = attr.encoding
+							data.data = parser.get_node_data().strip_edges()
+						else:
+							var csv = parser.get_node_data().split(",", false)
+							data.data = []
+
+							for v in csv:
+								data.data.push_back(int(v.strip_edges()))
+					else:
+						data.data = []
+
+				elif parser.get_node_name() == "tile":
+					data.data.push_back(int(parser.get_named_attribute_value("gid")))
+
+			err = parser.read()
 
 	return data
 

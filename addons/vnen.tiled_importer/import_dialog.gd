@@ -28,6 +28,8 @@ var origin_fd
 var target_fd
 var import_plugin
 
+var initialized = false
+
 func configure(plugin, tgt_path, metadata):
 	import_plugin = plugin
 	if (metadata):
@@ -45,6 +47,11 @@ func configure(plugin, tgt_path, metadata):
 				opt.item.set_text(1, metadata.get_option(opt_code))
 
 func _ready():
+
+	if initialized:
+		return
+	else:
+		initialized = true
 
 	options = {
 		"embed": {
