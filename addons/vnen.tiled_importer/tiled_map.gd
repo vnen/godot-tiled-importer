@@ -75,6 +75,8 @@ func build():
 	if not data.has("tileheight") or not data.has("tilewidth"):
 		return 'Invalid Tiled data: missing "tileheight" or "tilewidth" keys.'
 
+	var basename = options.target.substr(options.target.find_last('/'), options.target.length()).basename()
+
 	var map_size = Vector2(int(data.width), int(data.height))
 	var cell_size = Vector2(int(data.tilewidth), int(data.tileheight))
 
@@ -197,11 +199,9 @@ func build():
 			}
 
 	if options.single_tileset and not options.embed:
-		var base = options.target.substr(options.target.find_last('/'), options.target.length()).basename()
+		single_tileset.set_name(basename)
 
-		single_tileset.set_name(base)
-
-		var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + base + ".res")
+		var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + basename + ".res")
 		var err = ResourceSaver.save(tileset_path, single_tileset, ResourceSaver.FLAG_CHANGE_PATH)
 		if err != OK:
 			return "Couldn't save TileSet"
@@ -213,7 +213,7 @@ func build():
 	# TileSets done, creating the target scene
 
 	scene = Node2D.new()
-	scene.set_name(options.target.basename())
+	scene.set_name(basename)
 
 	for l in data.layers:
 		if l.has("compression"):
