@@ -5,8 +5,9 @@ This is a plugin for [Godot Engine](https://godotengine.org) to import
 
 ## Installation
 
-Copy the contents of the `addons` folder to your own project's `addons` folder.
-Then enable the plugin on the Project Settings.
+Download or clone this repository and copy the contents of the `addons` folder
+to your own project's `addons` folder. Then enable the plugin on the Project
+Settings.
 
 ## Usage
 

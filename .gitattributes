@@ -1,1 +1,2 @@
-*	eol=lf
+*.gd	eol=lf
+*.cfg	eol=lf
