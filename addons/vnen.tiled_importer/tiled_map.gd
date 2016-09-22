@@ -128,7 +128,6 @@ func build():
 			tilecount = int(ts.tilecount)
 		else:
 			return "Missing tile count (%s)" % [name]
-
 		if ts.has("image"):
 			image_path = options.basedir.plus_file(ts.image)
 			var dir = Directory.new()
@@ -150,39 +149,46 @@ func build():
 
 		var gid = firstgid
 
-		for y in range(margin, image_h, tilesize.y + margin + spacing):
-			for x in range(margin, image_w, tilesize.x + margin + spacing):
-				var tilepos = Vector2(x,y)
-				var region = Rect2(tilepos, tilesize)
+		var x = margin
+		var y = margin
 
-				tileset.create_tile(gid)
-				tileset.tile_set_texture(gid, image)
-				tileset.tile_set_region(gid, region)
+		for i in range(tilecount):
 
-				var rel_id = str(gid - firstgid)
+			var tilepos = Vector2(x,y)
+			var region = Rect2(tilepos, tilesize)
 
-				if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
-				                 and "objects" in ts.tiles[rel_id].objectgroup:
-					for obj in ts.tiles[rel_id].objectgroup.objects:
-						var shape = _shape_from_object(obj)
+			tileset.create_tile(gid)
+			tileset.tile_set_texture(gid, image)
+			tileset.tile_set_region(gid, region)
 
-						if typeof(shape) == TYPE_STRING:
-							return "Error on shape data in tileset %s:\n%s" % [name, shape]
+			var rel_id = str(gid - firstgid)
 
-						var offset = Vector2(int(obj.x), int(obj.y))
-						offset += Vector2(int(obj.width) / 2, int(obj.height) / 2)
+			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
+			                 and "objects" in ts.tiles[rel_id].objectgroup:
+				for obj in ts.tiles[rel_id].objectgroup.objects:
+					var shape = _shape_from_object(obj)
 
-						if obj.type == "navigation":
-							tileset.tile_set_navigation_polygon(gid, shape)
-							tileset.tile_set_navigation_polygon_offset(gid, offset)
-						elif obj.type == "occluder":
-							tileset.tile_set_light_occluder(gid, shape)
-							tileset.tile_set_occluder_offset(gid, offset)
-						else:
-							tileset.tile_set_shape(gid, shape)
-							tileset.tile_set_shape_offset(gid, offset)
+					if typeof(shape) == TYPE_STRING:
+						return "Error on shape data in tileset %s:\n%s" % [name, shape]
 
-				gid += 1
+					var offset = Vector2(int(obj.x), int(obj.y))
+					offset += Vector2(int(obj.width) / 2, int(obj.height) / 2)
+
+					if obj.type == "navigation":
+						tileset.tile_set_navigation_polygon(gid, shape)
+						tileset.tile_set_navigation_polygon_offset(gid, offset)
+					elif obj.type == "occluder":
+						tileset.tile_set_light_occluder(gid, shape)
+						tileset.tile_set_occluder_offset(gid, offset)
+					else:
+						tileset.tile_set_shape(gid, shape)
+						tileset.tile_set_shape_offset(gid, offset)
+
+			gid += 1
+			x += int(tilesize.x) + spacing
+			if x >= image_w - margin:
+				x = margin
+				y += int(tilesize.y) + spacing
 
 		tileset.set_name(name)
 
