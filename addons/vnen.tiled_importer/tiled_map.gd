@@ -79,6 +79,10 @@ func build():
 
 	var map_size = Vector2(int(data.width), int(data.height))
 	var cell_size = Vector2(int(data.tilewidth), int(data.tileheight))
+	var map_mode = TileMap.MODE_SQUARE
+	if "orientation" in data:
+		if data.orientation == "isometric":
+			map_mode = TileMap.MODE_ISOMETRIC
 
 	var single_tileset = null
 
@@ -245,6 +249,7 @@ func build():
 		tilemap.set_cell_size(cell_size)
 		tilemap.set_opacity(opacity)
 		tilemap.set_hidden(not visible)
+		tilemap.set_mode(map_mode)
 
 		var offset = Vector2()
 		if l.has("offsetx") and l.has("offsety"):
