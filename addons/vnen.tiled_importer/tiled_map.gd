@@ -264,9 +264,9 @@ func build():
 				count += 1
 				continue
 
-			var flipped_h = int_id & FLIPPED_HORIZONTALLY_FLAG
-			var flipped_v = int_id & FLIPPED_VERTICALLY_FLAG
-			var flipped_d = int_id & FLIPPED_DIAGONALLY_FLAG
+			var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
+			var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
+			var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
 
 			var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 
@@ -275,7 +275,7 @@ func build():
 				tilemap.set_tileset(_tileset_from_gid(firstgid))
 
 			var cell_pos = Vector2(count % int(map_size.width), int(count / map_size.width))
-			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_h, flipped_d)
+			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
 
 			count += 1
 
