@@ -412,36 +412,69 @@ func _tmx_to_dict(path):
 	if err != OK:
 		return parser_error_message
 
-	var tileset_data = {}
-
 	while err == OK:
 		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
 			if parser.get_node_name() == "map":
 				break
-			elif parser.get_node_name() == "tileset":
-				data.tilesets.push_back(tileset_data)
-				tileset_data = {}
 
 		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
 			if parser.get_node_name() == "tileset":
-				tileset_data = _attributes_to_dict(parser)
-				tileset_data.tiles = {}
+				# Empty element means external tileset
+				if not parser.is_empty():
+					data.tilesets.push_back(_parse_tileset(parser))
+				else:
+					var tileset_data = _attributes_to_dict(parser)
+					var tileset_src = path.get_base_dir().plus_file(tileset_data.source)
+					var tsparser = XMLParser.new()
 
-			elif parser.get_node_name() == "image":
-				var attr = _attributes_to_dict(parser)
-				tileset_data.image = attr.source
-				tileset_data.imagewidth = attr.width
-				tileset_data.imageheight = attr.height
+					err = tsparser.open(tileset_src)
+					if err != OK:
+						return "Couldn't open tileset file %s." % [tileset_src]
 
-			elif parser.get_node_name() == "tile":
-				var attr = _attributes_to_dict(parser)
-				var tile_data = _parse_tile_data(parser)
+					while err == OK:
+						if tsparser.get_node_type() == XMLParser.NODE_ELEMENT:
+							break
+						err = tsparser.read()
 
-				tileset_data.tiles[attr.id] = tile_data
+					if err != OK:
+						return "Error parsing tileset file %s." % [tileset_src]
+
+					var ts = _parse_tileset(tsparser)
+					ts.firstgid = int(tileset_data.firstgid)
+					data.tilesets.push_back(ts)
 
 			elif parser.get_node_name() == "layer":
 				 data.layers.push_back(_parse_layer(parser))
 
+
+		err = parser.read()
+
+	return data
+
+
+func _parse_tileset(parser):
+
+	var err = OK
+	var data = _attributes_to_dict(parser)
+	data.tiles = {}
+
+	err = parser.read()
+	while err == OK:
+		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+			if parser.get_node_name() == "tileset":
+				break
+		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+			if parser.get_node_name() == "tile":
+				var attr = _attributes_to_dict(parser)
+				var tile_data = _parse_tile_data(parser)
+
+				data.tiles[attr.id] = tile_data
+
+			elif parser.get_node_name() == "image":
+				var attr = _attributes_to_dict(parser)
+				data.image = attr.source
+				data.imagewidth = attr.width
+				data.imageheight = attr.height
 
 		err = parser.read()
 
