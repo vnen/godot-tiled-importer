@@ -58,6 +58,7 @@ func import(path, metadata):
 		"single_tileset": metadata.get_option("single_tileset"),
 		"embed": metadata.get_option("embed"),
 		"rel_path": metadata.get_option("rel_path"),
+		"image_flags": metadata.get_option("image_flags"),
 		"target": path,
 	}
 

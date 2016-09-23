@@ -26,6 +26,7 @@ extends ConfirmationDialog
 var options
 var origin_fd
 var target_fd
+var popup_menu
 var import_plugin
 
 var initialized = false
@@ -50,8 +51,8 @@ func _ready():
 
 	if initialized:
 		return
-	else:
-		initialized = true
+
+	initialized = true
 
 	options = {
 		"single_tileset": {
@@ -74,6 +75,14 @@ func _ready():
 			"type": TreeItem.CELL_MODE_STRING,
 			"text": "",
 			"default": "tilesets/",
+		},
+		"image_flags": {
+			"name": "Image flags",
+			"tooltip": "Flags to apply to the imported TileSet image.",
+			"type": TreeItem.CELL_MODE_CUSTOM,
+			"text": "",
+			"flags": "Mipmaps,Repeat,Filter,Anistropic,sRGB,Mirrored Repeat",
+			"default": 0,
 		}
 	}
 
@@ -94,6 +103,10 @@ func _ready():
 	target_fd.connect("file_selected", self, "_on_target_selected")
 	add_child(target_fd)
 
+	popup_menu = PopupMenu.new()
+	popup_menu.connect("item_pressed", self, "_on_popup_item_pressed")
+	add_child(popup_menu)
+
 
 func create_options_tree():
 
@@ -113,14 +126,36 @@ func create_options_tree():
 		item.set_text(1, opt.text)
 		item.set_tooltip(0, opt.tooltip)
 		item.set_tooltip(1, opt.tooltip)
+		item.set_metadata(0, opt_code)
 
 		if opt.type == TreeItem.CELL_MODE_CHECK:
 			item.set_checked(1, opt.default)
 		elif opt.type == TreeItem.CELL_MODE_STRING:
 			item.set_text(1, opt.default)
+		elif opt.type == TreeItem.CELL_MODE_CUSTOM:
+			item.set_editable(1, true)
+			item.set_metadata(1, opt.default)
+			item.set_text(1, flags_text(opt.default, opt.flags))
 
 		# Save the item for easy reference later
 		options[opt_code].item = item
+
+
+func flags_text(value, flags):
+	var arr_flags = flags.split(',', false)
+	var text = ""
+
+	for i in range(arr_flags.size()):
+		if value & (1 << i):
+			if text != "":
+				text += ", "
+			text += arr_flags[i]
+
+	if text == "":
+		return "None"
+
+	return text
+
 
 func validate_options():
 	var dir = Directory.new()
@@ -150,6 +185,44 @@ func validate_options():
 		return "Relative resource path must be relative and end with a slash."
 
 	return "OK"
+
+
+func _on_Options_custom_popup_edited( arrow_clicked ):
+
+	var item = get_node("MainDialog/Options").get_edited()
+	if item.get_cell_mode(1) != TreeItem.CELL_MODE_CUSTOM:
+		return
+
+	popup_menu.clear()
+
+	var pop_place = get_node("MainDialog/Options").get_custom_popup_rect()
+
+	var opt = options[item.get_metadata(0)]
+	var flags = opt.flags.split(',', false)
+	var value = item.get_metadata(1)
+	for i in range(flags.size()):
+		popup_menu.add_check_item(flags[i], i)
+		if value & (1 << i):
+			popup_menu.set_item_checked(i, true)
+
+	popup_menu.set_pos(pop_place.pos)
+	popup_menu.popup()
+
+
+func _on_popup_item_pressed(id):
+
+	var item = get_node("MainDialog/Options").get_edited()
+	var value = item.get_metadata(1)
+	var new_value = 0
+
+	if value & (1 << id):
+		new_value = value & ~(1 << id)
+	else:
+		new_value = value | (1 << id)
+
+	item.set_metadata(1, new_value)
+	item.set_text(1, flags_text(new_value, options[item.get_metadata(0)].flags))
+
 
 func _on_origin_browse_pressed():
 	origin_fd.popup_centered_ratio()
@@ -181,6 +254,8 @@ func _on_ImportTilemap_confirmed():
 			imd.set_option(opt_code, opt.item.is_checked(1))
 		elif opt.type == TreeItem.CELL_MODE_STRING:
 			imd.set_option(opt_code, opt.item.get_text(1))
+		elif opt.type == TreeItem.CELL_MODE_CUSTOM:
+			imd.set_option(opt_code, opt.item.get_metadata(1))
 
 	var f = File.new()
 	imd.set_source_md5(0, f.get_md5(imd.get_source_path(0)))

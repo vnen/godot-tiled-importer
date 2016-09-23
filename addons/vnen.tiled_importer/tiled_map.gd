@@ -134,7 +134,7 @@ func build():
 			if not dir.file_exists(image_path):
 				return 'Referenced image "%s" not found' % [image_path]
 			image.load(image_path)
-			image.set_flags(0)
+			image.set_flags(options.image_flags)
 
 			if not options.embed:
 				var target_image = options.target.get_base_dir() \

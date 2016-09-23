@@ -9,10 +9,10 @@ focus/ignore_mouse = false
 focus/stop_mouse = true
 size_flags/horizontal = 2
 size_flags/vertical = 2
-margin/left = 0.0
-margin/top = 0.0
-margin/right = 513.0
-margin/bottom = 237.0
+margin/left = 255.0
+margin/top = 181.0
+margin/right = 768.0
+margin/bottom = 462.0
 popup/exclusive = false
 window/title = "Import TileMap from Tiled"
 dialog/hide_on_ok = false
@@ -177,7 +177,7 @@ size_flags/vertical = 3
 margin/left = 0.0
 margin/top = 92.0
 margin/right = 493.0
-margin/bottom = 187.0
+margin/bottom = 231.0
 
 [node name="ErrorAlert" type="AcceptDialog" parent="."]
 
@@ -200,5 +200,7 @@ dialog/hide_on_ok = true
 [connection signal="pressed" from="MainDialog/Origin/Browse" to="." method="_on_origin_browse_pressed"]
 
 [connection signal="pressed" from="MainDialog/Target/Browse" to="." method="_on_target_browse_pressed"]
+
+[connection signal="custom_popup_edited" from="MainDialog/Options" to="." method="_on_Options_custom_popup_edited"]
 
 
