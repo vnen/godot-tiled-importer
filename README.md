@@ -7,9 +7,22 @@ This is a plugin for [Godot Engine](https://godotengine.org) to import
 
 ## Installation
 
-Download or clone this repository and copy the contents of the `addons` folder
-to your own project's `addons` folder. Then enable the plugin on the Project
-Settings.
+Simply download it from Godot Asset Library: https://godotengine.org/asset-library/asset/25.
+
+Alternatively, download or clone this repository and copy the contents of the
+`addons` folder to your own project's `addons` folder.
+
+Then enable the plugin on the Project Settings.
+
+## Features
+
+* Import Tiled file as a Godot scene. Each layer in Tiled is a TileMap in Godot.
+* Both `.tmx` (XML) and `.json` formats.
+* Support for Base64 encoded map.
+* Orthogonal and isometric maps.
+* Import visibility and opacity from layers.
+* Import collision/occluder/navigation shapes (based on Tiled object type).
+* Custom import options, such as whether to embed the resources into the scene.
 
 ## Usage
 
@@ -68,6 +81,10 @@ be saved individually in the selected relative folder.
 
 The relative path from the target scene where to save the resources
 (images and tilesets).
+
+### Image flags
+
+The image flags to apply to all imported TileSet images.
 
 ## License
 
