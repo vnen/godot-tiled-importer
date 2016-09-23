@@ -24,10 +24,11 @@ tool
 extends EditorImportPlugin
 
 const TiledMap = preload("tiled_map.gd")
+const PLUGIN_NAME = "org.vnen.tiled_importer"
 var dialog = null
 
 func get_name():
-	return "org.vnen.tiled_importer"
+	return PLUGIN_NAME
 
 func get_visible_name():
 	return "TileMap from Tiled Editor"
@@ -83,6 +84,12 @@ func import(path, metadata):
 	err = packed_scene.pack(scene)
 	if err != OK:
 		return "Error packing scene"
+
+	var f = File.new()
+
+	metadata.set_editor(PLUGIN_NAME)
+	metadata.set_source_md5(0, f.get_md5(src))
+	packed_scene.set_import_metadata(metadata)
 
 	err = ResourceSaver.save(path, packed_scene, ResourceSaver.FLAG_CHANGE_PATH)
 	if err != OK:

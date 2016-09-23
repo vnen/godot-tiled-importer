@@ -46,6 +46,9 @@ func configure(plugin, tgt_path, metadata):
 				opt.item.set_checked(1, metadata.get_option(opt_code))
 			elif opt.type == TreeItem.CELL_MODE_STRING:
 				opt.item.set_text(1, metadata.get_option(opt_code))
+			elif opt.type == TreeItem.CELL_MODE_CUSTOM:
+				opt.item.set_metadata(1, metadata.get_option(opt_code))
+				opt.item.set_text(1, flags_text(metadata.get_option(opt_code), options[opt_code].flags))
 
 func _ready():
 
