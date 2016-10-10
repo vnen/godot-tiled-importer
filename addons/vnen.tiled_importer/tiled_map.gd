@@ -161,7 +161,7 @@ func build():
 			tileset.tile_set_texture(gid, image)
 			tileset.tile_set_region(gid, region)
 
-			var rel_id = str(gid - firstgid)
+			var rel_id = gid - firstgid
 
 			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
 			                 and "objects" in ts.tiles[rel_id].objectgroup:
