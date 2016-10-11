@@ -79,6 +79,13 @@ func _ready():
 			"text": "",
 			"default": "tilesets/",
 		},
+		"separate_img_dir": {
+			"name": "Create seperate image directories",
+			"tooltip": "Create a directory per TileSet when using image collection sets.",
+			"type": TreeItem.CELL_MODE_CHECK,
+			"text": "On",
+			"default": false,
+		},
 		"image_flags": {
 			"name": "Image flags",
 			"tooltip": "Flags to apply to the imported TileSet image.",

@@ -101,12 +101,14 @@ func build():
 		var margin = 0
 		var firstgid = 0
 		var image = ImageTexture.new()
+		var target_dir = ""
 		var image_path = ""
 		var image_h = 0
 		var image_w = 0
 		var name = ""
 		var tilesize = Vector2()
 		var tilecount = 0
+		var has_global_img = false
 
 		if ts.has("spacing"):
 			spacing = int(ts.spacing)
@@ -129,23 +131,19 @@ func build():
 		else:
 			return "Missing tile count (%s)" % [name]
 		if ts.has("image"):
+			has_global_img = true
 			image_path = options.basedir.plus_file(ts.image)
-			var dir = Directory.new()
-			if not dir.file_exists(image_path):
-				return 'Referenced image "%s" not found' % [image_path]
-			image.load(image_path)
-			image.set_flags(options.image_flags)
-
-			if not options.embed:
-				var target_image = options.target.get_base_dir() \
-								   .plus_file(options.rel_path + name + ".png")
-				var err = ResourceSaver.save(target_image, image, ResourceSaver.FLAG_CHANGE_PATH)
-				if err != OK:
-					return "Couldn't save image for Tileset %s" % [name]
-				image.take_over_path(target_image)
-
-		if image.get_width() != image_w or image.get_height() != image_h:
-			return "Image dimensions don't match (%s)" % [image_path]
+			target_dir = options.target.get_base_dir().plus_file(options.rel_path)
+			image = _load_image(image_path, target_dir, name + ".png", image_w, image_h)
+			if typeof(image) == TYPE_STRING:
+				return image
+		else:
+			if options.separate_img_dir:
+				target_dir = options.target.get_base_dir().plus_file(options.rel_path).plus_file(name)
+				if not Directory.new().dir_exists(target_dir):
+					Directory.new().make_dir_recursive(target_dir)
+			else:
+				target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 
 		var gid = firstgid
 
@@ -158,10 +156,20 @@ func build():
 			var region = Rect2(tilepos, tilesize)
 
 			tileset.create_tile(gid)
-			tileset.tile_set_texture(gid, image)
-			tileset.tile_set_region(gid, region)
+			if has_global_img:
+				tileset.tile_set_texture(gid, image)
+				tileset.tile_set_region(gid, region)
 
 			var rel_id = str(gid - firstgid)
+
+			if not has_global_img and "image" in ts.tiles[rel_id]:
+				var _img = ts.tiles[rel_id].image
+				image_path = options.basedir.plus_file(_img)
+				_img = _img.get_file().basename()
+				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
+				if typeof(image) == TYPE_STRING:
+					return image
+				tileset.tile_set_texture(gid, image)
 
 			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
 			                 and "objects" in ts.tiles[rel_id].objectgroup:
@@ -392,6 +400,25 @@ func _parse_base64_layer(data):
 
 	return result
 
+# Load, copy and verify image
+func _load_image(source_img, target_folder, filename, width, height):
+	var dir = Directory.new()
+	if not dir.file_exists(source_img):
+		return 'Referenced image "%s" not found' % [source_img]
+	var image = ImageTexture.new()
+	image.load(source_img)
+	image.set_flags(options.image_flags)
+
+	if not options.embed:
+		var target_image = target_folder.plus_file(filename)
+		var err = ResourceSaver.save(target_image, image, ResourceSaver.FLAG_CHANGE_PATH)
+		if err != OK:
+			return "Couldn't save tileset image %s" % [target_image]
+		image.take_over_path(target_image)
+		
+	if image.get_width() != width or image.get_height() != height:
+		return "Image dimensions don't match (%s)" % [source_img]
+	return image
 
 # Read a .tmx file and build a dictionary in the same format as Tiled .json
 # This helps normalizing the data and using a single builder
@@ -427,7 +454,10 @@ func _tmx_to_dict(path):
 			if parser.get_node_name() == "tileset":
 				# Empty element means external tileset
 				if not parser.is_empty():
-					data.tilesets.push_back(_parse_tileset(parser))
+					var tileset = _parse_tileset(parser)
+					if typeof(tileset) == TYPE_STRING:
+						return tileset
+					data.tilesets.push_back(tileset)
 				else:
 					var tileset_data = _attributes_to_dict(parser)
 					var tileset_src = path.get_base_dir().plus_file(tileset_data.source)
@@ -473,11 +503,13 @@ func _parse_tileset(parser):
 			if parser.get_node_name() == "tile":
 				var attr = _attributes_to_dict(parser)
 				var tile_data = _parse_tile_data(parser)
-
+				if typeof(tile_data) == TYPE_STRING:
+					return tile_data
 				data.tiles[str(attr.id)] = tile_data
-
 			elif parser.get_node_name() == "image":
 				var attr = _attributes_to_dict(parser)
+				if not "source" in attr:
+					return "Error loading image tag.\nNo source attribute found."
 				data.image = attr.source
 				data.imagewidth = attr.width
 				data.imageheight = attr.height
@@ -507,7 +539,13 @@ func _parse_tile_data(parser):
 				data.objectgroup = obj_group
 
 		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
-			if parser.get_node_name() == "objectgroup":
+			if parser.get_node_name() == "image":
+				# If there are multiple images in one tile we only use the last one.
+				var attr = _attributes_to_dict(parser)
+				if not "source" in attr:
+					return "Error loading image tag.\nNo source attribute found."
+				data.image = attr.source
+			elif parser.get_node_name() == "objectgroup":
 				obj_group = _attributes_to_dict(parser)
 				for attr in ["width", "height", "offsetx", "offsety"]:
 					if not attr in obj_group:
