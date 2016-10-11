@@ -474,7 +474,7 @@ func _parse_tileset(parser):
 				var attr = _attributes_to_dict(parser)
 				var tile_data = _parse_tile_data(parser)
 
-				data.tiles[attr.id] = tile_data
+				data.tiles[str(attr.id)] = tile_data
 
 			elif parser.get_node_name() == "image":
 				var attr = _attributes_to_dict(parser)
