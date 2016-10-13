@@ -80,7 +80,7 @@ func _ready():
 			"default": "tilesets/",
 		},
 		"separate_img_dir": {
-			"name": "Create seperate image directories",
+			"name": "Create separate image directories",
 			"tooltip": "Create a directory per TileSet when using image collection sets.",
 			"type": TreeItem.CELL_MODE_CHECK,
 			"text": "On",
