@@ -343,8 +343,12 @@ func _shape_from_object(obj):
 			shape.set_polygon(vertices)
 			shape.set_closed("polygon" in obj)
 		else:
-			shape = ConcavePolygonShape2D.new()
-			shape.set_segments(vertices)
+			if vertices.size() == 3:
+				shape = ConvexPolygonShape2D.new()
+				shape.set_points(vertices)
+			else:
+				shape = ConcavePolygonShape2D.new()
+				shape.set_segments(vertices)
 
 	elif "ellipse" in obj:
 		if obj.type == "navigation" or obj.type == "occluder":
