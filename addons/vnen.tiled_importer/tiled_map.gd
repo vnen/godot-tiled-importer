@@ -275,9 +275,10 @@ func build():
 		if not l.has("type"):
 			return 'Invalid Tiled data: missing "type" key on layer.'
 
+		if not l.has("name"):
+			return 'Invalid Tiled data: missing "name" key on layer.'
+
 		if l.type == "tilelayer":
-			if not l.has("name"):
-				return 'Invalid Tiled data: missing "name" key on layer.'
 			var name = l.name
 
 			if not l.has("data"):
@@ -344,8 +345,6 @@ func build():
 			tilemap.set_owner(scene)
 
 		elif l.type == "imagelayer":
-			if not l.has("name"):
-				return 'Invalid Tiled data: missing "name" key on image layer.'
 			if not l.has("image"):
 				return 'Invalid Tiled data: missing "image" key on image layer.'
 
@@ -375,6 +374,66 @@ func build():
 			scene.add_child(sprite)
 			sprite.set_pos(pos + offset)
 			sprite.set_owner(scene)
+
+		elif l.type == "objectgroup":
+			if not l.has("objects"):
+				return 'Invalid Tiled data: missing "objects" key on object layer.'
+
+			if typeof(l.objects) != TYPE_ARRAY:
+				return 'Invalid Tiled data: "objects" key on object layer is not an array.'
+
+			var object = Node2D.new()
+
+			if options.custom_properties and l.has("properties") and l.has("propertytypes"):
+				_set_meta(object, l.properties, l.propertytypes)
+
+			object.set_name(l.name)
+			scene.add_child(object)
+			object.set_owner(scene)
+
+			for obj in l.objects:
+				if not obj.has("gid"):
+					if obj.type == "navigation" or obj.type == "occluder":
+						return "Invalid shape in object layer. Navigation and Occluder are not allowed."
+
+					var shape = _shape_from_object(obj)
+					if typeof(shape) == TYPE_STRING:
+						return shape
+
+					var body = StaticBody2D.new()
+					if obj.has("name") and not obj.name.empty():
+						body.set_name(obj.name);
+					else:
+						body.set_name(str(obj.id))
+
+					var collision
+					if not ("polygon" in obj or "polyline" in obj):
+						collision = CollisionShape2D.new()
+						collision.set_shape(shape)
+					else:
+						collision = CollisionPolygon2D.new()
+						var points = null
+						if shape extends ConcavePolygonShape2D:
+							points = shape.get_segments()
+						else:
+							points = shape.get_points()
+						collision.set_polygon(points)
+
+					body.add_child(collision)
+					object.add_child(body)
+					body.set_owner(scene)
+					collision.set_owner(scene)
+
+					var pos = Vector2()
+					if obj.has("x"):
+						pos.x = float(obj.x)
+					if obj.has("y"):
+						pos.y = float(obj.y)
+
+					body.set_pos(pos)
+
+					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
+						_set_meta(body, obj.properties, obj.propertytypes)
 
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
