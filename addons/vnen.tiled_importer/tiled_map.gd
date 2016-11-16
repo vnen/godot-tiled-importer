@@ -90,7 +90,39 @@ func build():
 		single_tileset = TileSet.new()
 
 	# Make tilesets
-	for ts in data.tilesets:
+	for tstemp in data.tilesets:
+		var ts = tstemp
+		if tstemp.has("source"):
+			var err = OK
+			var tileset_src = source.get_base_dir().plus_file(tstemp.source)
+			if tileset_src.extension() == "json":
+				var f = File.new()
+				err = f.open(tileset_src, File.READ)
+				if err != OK:
+					return "Couldn't open tileset file %s." % [tileset_src]
+
+				ts = {}
+				err = ts.parse_json(f.get_as_text())
+				if err != OK:
+					return "Couldn't parse tileset file %s." % [tileset_src]
+			else:
+				var tsparser = XMLParser.new()
+
+				err = tsparser.open(tileset_src)
+				if err != OK:
+					return "Couldn't open tileset file %s." % [tileset_src]
+
+				while err == OK:
+					if tsparser.get_node_type() == XMLParser.NODE_ELEMENT:
+						break
+					err = tsparser.read()
+
+				if err != OK:
+					return "Error parsing tileset file %s." % [tileset_src]
+
+				ts = _parse_tileset(tsparser)
+			ts.firstgid = int(tstemp.firstgid)
+
 		var tileset = null
 		if options.single_tileset:
 			tileset = single_tileset
@@ -419,7 +451,7 @@ func _load_image(source_img, target_folder, filename, width, height):
 		if err != OK:
 			return "Couldn't save tileset image %s" % [target_image]
 		image.take_over_path(target_image)
-		
+
 	if image.get_width() != width or image.get_height() != height:
 		return "Image dimensions don't match (%s)" % [source_img]
 	return image
