@@ -348,10 +348,6 @@ func build():
 				return 'Invalid Tiled data: missing "name" key on image layer.'
 			if not l.has("image"):
 				return 'Invalid Tiled data: missing "image" key on image layer.'
-			if not l.has("width"):
-				return 'Invalid Tiled data: missing "width" key on image layer.'
-			if not l.has("height"):
-				return 'Invalid Tiled data: missing "height" key on image layer.'
 
 			var sprite = Sprite.new()
 			sprite.set_name(l.name)
@@ -600,6 +596,9 @@ func _tmx_to_dict(path):
 			elif parser.get_node_name() == "layer":
 				 data.layers.push_back(_parse_layer(parser))
 
+			elif parser.get_node_name() == "imagelayer":
+				 data.layers.push_back(_parse_imagelayer(parser))
+
 			elif parser.get_node_name() == "properties":
 				var prop_data = _parse_properties(parser)
 				if typeof(prop_data) == TYPE_STRING:
@@ -789,6 +788,31 @@ func _parse_layer(parser):
 			err = parser.read()
 
 	return data
+
+func _parse_imagelayer(parser):
+	var err = OK
+	var data = _attributes_to_dict(parser)
+	data.type = "imagelayer"
+
+	if not parser.is_empty():
+		err = parser.read()
+
+		while err == OK:
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name().to_lower() == "imagelayer":
+					break
+			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name().to_lower() == "image":
+					var image = _attributes_to_dict(parser)
+					if not image.has("source"):
+						return "Missing source attribute in imagelayer";
+
+					data.image = image.source
+
+			err = parser.read()
+
+	return data
+
 
 # Parse custom properties
 func _parse_properties(parser):
