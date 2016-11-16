@@ -426,8 +426,12 @@ func build():
 					var obj_visible = true
 					if obj.has("visible"):
 						obj_visible = bool(obj.visible)
-
 					body.set_hidden(not obj_visible)
+
+					var rot = 0
+					if obj.has("rotation"):
+						rot = float(obj.rotation)
+					body.set_rotd(rot)
 
 					body.add_child(collision)
 					object.add_child(body)
