@@ -272,72 +272,76 @@ func build():
 		if l.has("compression"):
 			return 'Tiled compressed format is not supported. Change your Map properties to a format without compression.'
 
-		if not l.has("name"):
-			return 'Invalid Tiled data: missing "name" key on layer.'
-		var name = l.name
+		if not l.has("type"):
+			return 'Invalid Tiled data: missing "type" key on layer.'
 
-		if not l.has("data"):
-			return 'Invalid Tiled data: missing "data" key on layer %s.' % [name]
-		var layer_data = l.data
+		if l.type == "tilelayer":
+			if not l.has("name"):
+				return 'Invalid Tiled data: missing "name" key on layer.'
+			var name = l.name
 
-		if "encoding" in l:
-			if l.encoding != "base64":
-				return 'Unsupported layer data encoding. Use Base64 or no enconding.'
-			layer_data = _parse_base64_layer(l.data)
+			if not l.has("data"):
+				return 'Invalid Tiled data: missing "data" key on layer %s.' % [name]
+			var layer_data = l.data
 
-		var opacity = 1.0
-		var visible = true
+			if "encoding" in l:
+				if l.encoding != "base64":
+					return 'Unsupported layer data encoding. Use Base64 or no enconding.'
+				layer_data = _parse_base64_layer(l.data)
 
-		if l.has("opacity"):
-			opacity = float(l.opacity)
-		if l.has("visible"):
-			visible = bool(l.visible)
+			var opacity = 1.0
+			var visible = true
 
-		var tilemap = TileMap.new()
-		tilemap.set_name(name)
-		tilemap.set_cell_size(cell_size)
-		tilemap.set_opacity(opacity)
-		tilemap.set_hidden(not visible)
-		tilemap.set_mode(map_mode)
+			if l.has("opacity"):
+				opacity = float(l.opacity)
+			if l.has("visible"):
+				visible = bool(l.visible)
 
-		var offset = Vector2()
-		if l.has("offsetx") and l.has("offsety"):
-			offset = Vector2(int(l.offsetx), int(l.offsety))
+			var tilemap = TileMap.new()
+			tilemap.set_name(name)
+			tilemap.set_cell_size(cell_size)
+			tilemap.set_opacity(opacity)
+			tilemap.set_hidden(not visible)
+			tilemap.set_mode(map_mode)
 
-		tilemap.set_pos(offset)
+			var offset = Vector2()
+			if l.has("offsetx") and l.has("offsety"):
+				offset = Vector2(int(l.offsetx), int(l.offsety))
 
-		var firstgid = 0
-		tilemap.set_tileset(_tileset_from_gid(firstgid))
+			tilemap.set_pos(offset)
 
-		var count = 0
-		for tile_id in layer_data:
+			var firstgid = 0
+			tilemap.set_tileset(_tileset_from_gid(firstgid))
 
-			var int_id = int(tile_id)
+			var count = 0
+			for tile_id in layer_data:
 
-			if int_id == 0:
+				var int_id = int(tile_id)
+
+				if int_id == 0:
+					count += 1
+					continue
+
+				var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
+				var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
+				var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
+
+				var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+
+				if firstgid == 0:
+					firstgid = gid
+					tilemap.set_tileset(_tileset_from_gid(firstgid))
+
+				var cell_pos = Vector2(count % int(map_size.width), int(count / map_size.width))
+				tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
+
 				count += 1
-				continue
 
-			var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
-			var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
-			var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
+			if options.custom_properties and l.has("properties") and l.has("propertytypes"):
+				_set_meta(tilemap, l.properties, l.propertytypes)
 
-			var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
-
-			if firstgid == 0:
-				firstgid = gid
-				tilemap.set_tileset(_tileset_from_gid(firstgid))
-
-			var cell_pos = Vector2(count % int(map_size.width), int(count / map_size.width))
-			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
-
-			count += 1
-
-		if options.custom_properties and l.has("properties") and l.has("propertytypes"):
-			_set_meta(tilemap, l.properties, l.propertytypes)
-
-		scene.add_child(tilemap)
-		tilemap.set_owner(scene)
+			scene.add_child(tilemap)
+			tilemap.set_owner(scene)
 
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
@@ -702,6 +706,7 @@ func _parse_object(parser):
 func _parse_layer(parser):
 	var err = OK
 	var data = _attributes_to_dict(parser)
+	data.type = "tilelayer"
 
 	if not parser.is_empty():
 		err = parser.read()
