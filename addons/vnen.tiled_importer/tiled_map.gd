@@ -278,6 +278,14 @@ func build():
 		if not l.has("name"):
 			return 'Invalid Tiled data: missing "name" key on layer.'
 
+		var opacity = 1.0
+		var visible = true
+
+		if l.has("opacity"):
+			opacity = float(l.opacity)
+		if l.has("visible"):
+			visible = bool(l.visible)
+
 		if l.type == "tilelayer":
 			var name = l.name
 
@@ -289,14 +297,6 @@ func build():
 				if l.encoding != "base64":
 					return 'Unsupported layer data encoding. Use Base64 or no enconding.'
 				layer_data = _parse_base64_layer(l.data)
-
-			var opacity = 1.0
-			var visible = true
-
-			if l.has("opacity"):
-				opacity = float(l.opacity)
-			if l.has("visible"):
-				visible = bool(l.visible)
 
 			var tilemap = TileMap.new()
 			tilemap.set_name(name)
@@ -371,6 +371,8 @@ func build():
 				return image
 
 			sprite.set_texture(image)
+			sprite.set_opacity(opacity)
+			sprite.set_hidden(not visible)
 			scene.add_child(sprite)
 			sprite.set_pos(pos + offset)
 			sprite.set_owner(scene)
@@ -388,6 +390,8 @@ func build():
 				_set_meta(object, l.properties, l.propertytypes)
 
 			object.set_name(l.name)
+			object.set_opacity(opacity)
+			object.set_hidden(not visible)
 			scene.add_child(object)
 			object.set_owner(scene)
 
@@ -418,6 +422,12 @@ func build():
 						else:
 							points = shape.get_points()
 						collision.set_polygon(points)
+
+					var obj_visible = true
+					if obj.has("visible"):
+						obj_visible = bool(obj.visible)
+
+					body.set_hidden(not obj_visible)
 
 					body.add_child(collision)
 					object.add_child(body)
