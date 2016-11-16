@@ -465,23 +465,39 @@ func _tmx_to_dict(path):
 				else:
 					var tileset_data = _attributes_to_dict(parser)
 					var tileset_src = path.get_base_dir().plus_file(tileset_data.source)
-					var tsparser = XMLParser.new()
 
-					err = tsparser.open(tileset_src)
-					if err != OK:
-						return "Couldn't open tileset file %s." % [tileset_src]
+					if tileset_src.extension() == "json":
+						var f = File.new()
+						err = f.open(tileset_src, File.READ)
+						if err != OK:
+							return "Couldn't open tileset file %s." % [tileset_src]
 
-					while err == OK:
-						if tsparser.get_node_type() == XMLParser.NODE_ELEMENT:
-							break
-						err = tsparser.read()
+						var ts = {}
+						err = ts.parse_json(f.get_as_text())
+						if err != OK:
+							return "Couldn't parse tileset file %s." % [tileset_src]
 
-					if err != OK:
-						return "Error parsing tileset file %s." % [tileset_src]
+						ts.firstgid = int(tileset_data.firstgid)
+						data.tilesets.push_back(ts)
 
-					var ts = _parse_tileset(tsparser)
-					ts.firstgid = int(tileset_data.firstgid)
-					data.tilesets.push_back(ts)
+					else:
+						var tsparser = XMLParser.new()
+
+						err = tsparser.open(tileset_src)
+						if err != OK:
+							return "Couldn't open tileset file %s." % [tileset_src]
+
+						while err == OK:
+							if tsparser.get_node_type() == XMLParser.NODE_ELEMENT:
+								break
+							err = tsparser.read()
+
+						if err != OK:
+							return "Error parsing tileset file %s." % [tileset_src]
+
+						var ts = _parse_tileset(tsparser)
+						ts.firstgid = int(tileset_data.firstgid)
+						data.tilesets.push_back(ts)
 
 			elif parser.get_node_name() == "layer":
 				 data.layers.push_back(_parse_layer(parser))
