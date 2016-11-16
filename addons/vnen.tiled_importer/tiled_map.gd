@@ -658,6 +658,10 @@ func _tmx_to_dict(path):
 			elif parser.get_node_name() == "imagelayer":
 				 data.layers.push_back(_parse_imagelayer(parser))
 
+			elif parser.get_node_name() == "objectgroup":
+				data.layers.push_back(_parser_objectlayer(parser))
+
+
 			elif parser.get_node_name() == "properties":
 				var prop_data = _parse_properties(parser)
 				if typeof(prop_data) == TYPE_STRING:
@@ -867,11 +871,42 @@ func _parse_imagelayer(parser):
 						return "Missing source attribute in imagelayer";
 
 					data.image = image.source
+				elif parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					if typeof(prop_data) == TYPE_STRING:
+						return prop_data
+					data.properties = prop_data.properties
+					data.propertytypes = prop_data.propertytypes
 
 			err = parser.read()
 
 	return data
 
+func _parser_objectlayer(parser):
+	var err = OK
+	var data = _attributes_to_dict(parser)
+	data.type = "objectgroup"
+	data.objects = []
+
+	if not parser.is_empty():
+		err = parser.read()
+		while err == OK:
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name() == "objectgroup":
+					break
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name() == "object":
+					data.objects.push_back(_parse_object(parser))
+				elif parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					if typeof(prop_data) == TYPE_STRING:
+						return prop_data
+					data.properties = prop_data.properties
+					data.propertytypes = prop_data.propertytypes
+
+			err = parser.read()
+
+	return data
 
 # Parse custom properties
 func _parse_properties(parser):
