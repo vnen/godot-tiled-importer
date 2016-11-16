@@ -448,6 +448,46 @@ func build():
 
 					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
 						_set_meta(body, obj.properties, obj.propertytypes)
+				else: # if obj.has("gid"):
+					var tile_raw_id = int(obj.gid)
+					var tileid = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+					var tileset = _tileset_from_gid(tileid)
+
+					if tileset == null:
+						return "Invalid GID in object layer tile"
+
+					var sprite = Sprite.new()
+					sprite.set_texture(tileset.tile_get_texture(tileid))
+					sprite.set_region(true)
+					sprite.set_region_rect(tileset.tile_get_region(tileid))
+
+					if obj.has("name") and not obj.name.empty():
+						sprite.set_name(obj.name);
+					else:
+						sprite.set_name(str(obj.id))
+
+					if tile_raw_id & FLIPPED_HORIZONTALLY_FLAG:
+						sprite.set_flip_h(true)
+					if tile_raw_id & FLIPPED_VERTICALLY_FLAG:
+						sprite.set_flip_v(true)
+
+					var pos = Vector2()
+					if obj.has("x"):
+						pos.x = float(obj.x)
+					if obj.has("y"):
+						pos.y = float(obj.y)
+					sprite.set_pos(pos)
+
+					var rot = 0
+					if obj.has("rotation"):
+						rot = float(obj.rotation)
+					sprite.set_rotd(rot)
+
+					object.add_child(sprite)
+					sprite.set_owner(scene)
+
+					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
+						_set_meta(sprite, obj.properties, obj.propertytypes)
 
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
