@@ -397,57 +397,90 @@ func build():
 
 			for obj in l.objects:
 				if not obj.has("gid"):
-					if obj.type == "navigation" or obj.type == "occluder":
-						return "Invalid shape in object layer. Navigation and Occluder are not allowed."
+					if obj.type == "navigation":
+						return "Invalid shape in object layer."
 
 					var shape = _shape_from_object(obj)
 					if typeof(shape) == TYPE_STRING:
 						return shape
 
-					var body = StaticBody2D.new()
-					if obj.has("name") and not obj.name.empty():
-						body.set_name(obj.name);
-					else:
-						body.set_name(str(obj.id))
-
-					var collision
-					if not ("polygon" in obj or "polyline" in obj):
-						collision = CollisionShape2D.new()
-						collision.set_shape(shape)
-					else:
-						collision = CollisionPolygon2D.new()
-						var points = null
-						if shape extends ConcavePolygonShape2D:
-							points = shape.get_segments()
+					if obj.type == "occluder":
+						var occluder = LightOccluder2D.new()
+						if obj.has("name") and not obj.name.empty():
+							occluder.set_name(obj.name);
 						else:
-							points = shape.get_points()
-						collision.set_polygon(points)
+							occluder.set_name(str(obj.id))
 
-					var obj_visible = true
-					if obj.has("visible"):
-						obj_visible = bool(obj.visible)
-					body.set_hidden(not obj_visible)
+						var pos = Vector2()
+						if obj.has("x"):
+							pos.x = float(obj.x)
+						if obj.has("y"):
+							pos.y = float(obj.y)
+						occluder.set_pos(pos)
 
-					var rot = 0
-					if obj.has("rotation"):
-						rot = float(obj.rotation)
-					body.set_rotd(rot)
+						var rot = 0
+						if obj.has("rotation"):
+							rot = float(obj.rotation)
+						occluder.set_rotd(-rot)
 
-					body.add_child(collision)
-					object.add_child(body)
-					body.set_owner(scene)
-					collision.set_owner(scene)
+						var obj_visible = true
+						if obj.has("visible"):
+							obj_visible = bool(obj.visible)
+						occluder.set_hidden(not obj_visible)
 
-					var pos = Vector2()
-					if obj.has("x"):
-						pos.x = float(obj.x)
-					if obj.has("y"):
-						pos.y = float(obj.y)
+						occluder.set_occluder_polygon(shape)
 
-					body.set_pos(pos)
+						object.add_child(occluder)
+						occluder.set_owner(scene)
 
-					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
-						_set_meta(body, obj.properties, obj.propertytypes)
+						if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
+							_set_meta(occluder, obj.properties, obj.propertytypes)
+
+					else:
+						var body = StaticBody2D.new()
+						if obj.has("name") and not obj.name.empty():
+							body.set_name(obj.name);
+						else:
+							body.set_name(str(obj.id))
+
+						var collision
+						if not ("polygon" in obj or "polyline" in obj):
+							collision = CollisionShape2D.new()
+							collision.set_shape(shape)
+						else:
+							collision = CollisionPolygon2D.new()
+							var points = null
+							if shape extends ConcavePolygonShape2D:
+								points = shape.get_segments()
+							else:
+								points = shape.get_points()
+							collision.set_polygon(points)
+
+						var obj_visible = true
+						if obj.has("visible"):
+							obj_visible = bool(obj.visible)
+						body.set_hidden(not obj_visible)
+
+						var rot = 0
+						if obj.has("rotation"):
+							rot = float(obj.rotation)
+						body.set_rotd(-rot)
+
+						body.add_child(collision)
+						object.add_child(body)
+						body.set_owner(scene)
+						collision.set_owner(scene)
+
+						var pos = Vector2()
+						if obj.has("x"):
+							pos.x = float(obj.x)
+						if obj.has("y"):
+							pos.y = float(obj.y)
+
+						body.set_pos(pos)
+
+						if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
+							_set_meta(body, obj.properties, obj.propertytypes)
 				else: # if obj.has("gid"):
 					var tile_raw_id = int(obj.gid)
 					var tileid = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
@@ -481,7 +514,12 @@ func build():
 					var rot = 0
 					if obj.has("rotation"):
 						rot = float(obj.rotation)
-					sprite.set_rotd(rot)
+					sprite.set_rotd(-rot)
+
+					var obj_visible = true
+					if obj.has("visible"):
+						obj_visible = bool(obj.visible)
+					sprite.set_hidden(not obj_visible)
 
 					object.add_child(sprite)
 					sprite.set_owner(scene)
