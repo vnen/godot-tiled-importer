@@ -559,6 +559,14 @@ func _tmx_to_dict(path):
 			elif parser.get_node_name() == "layer":
 				 data.layers.push_back(_parse_layer(parser))
 
+			elif parser.get_node_name() == "properties":
+				var prop_data = _parse_properties(parser)
+				if typeof(prop_data) == TYPE_STRING:
+					return prop_data
+
+				data.properties = prop_data.properties
+				data.propertytypes = prop_data.propertytypes
+
 
 		err = parser.read()
 
@@ -590,6 +598,13 @@ func _parse_tileset(parser):
 				data.image = attr.source
 				data.imagewidth = attr.width
 				data.imageheight = attr.height
+			elif parser.get_node_name() == "properties":
+				var prop_data = _parse_properties(parser)
+				if typeof(prop_data) == TYPE_STRING:
+					return prop_data
+
+				data.properties = prop_data.properties
+				data.propertytypes = prop_data.propertytypes
 
 		err = parser.read()
 
@@ -720,6 +735,45 @@ func _parse_layer(parser):
 
 				elif parser.get_node_name() == "tile":
 					data.data.push_back(int(parser.get_named_attribute_value("gid")))
+
+				elif parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					if typeof(prop_data) == TYPE_STRING:
+						return prop_data
+
+					data.properties = prop_data.properties
+					data.propertytypes = prop_data.propertytypes
+
+			err = parser.read()
+
+	return data
+
+# Parse custom properties
+func _parse_properties(parser):
+	var err = OK
+	var data = {
+		"properties": {},
+		"propertytypes": {},
+	}
+
+	if not parser.is_empty():
+		err = parser.read()
+
+		while err == OK:
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name() == "properties":
+					break
+			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name() == "property":
+					var prop_data = _attributes_to_dict(parser)
+					if not (prop_data.has("name") and prop_data.has("value")):
+						return "Missing information in custom properties"
+
+					data.properties[prop_data.name] = prop_data.value
+					if prop_data.has("type"):
+						data.propertytypes[prop_data.name] = prop_data.type
+					else:
+						data.propertytypes[prop_data.name] = "string"
 
 			err = parser.read()
 
