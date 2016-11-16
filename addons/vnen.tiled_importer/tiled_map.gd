@@ -343,6 +343,43 @@ func build():
 			scene.add_child(tilemap)
 			tilemap.set_owner(scene)
 
+		elif l.type == "imagelayer":
+			if not l.has("name"):
+				return 'Invalid Tiled data: missing "name" key on image layer.'
+			if not l.has("image"):
+				return 'Invalid Tiled data: missing "image" key on image layer.'
+			if not l.has("width"):
+				return 'Invalid Tiled data: missing "width" key on image layer.'
+			if not l.has("height"):
+				return 'Invalid Tiled data: missing "height" key on image layer.'
+
+			var sprite = Sprite.new()
+			sprite.set_name(l.name)
+			sprite.set_centered(false)
+
+			var pos = Vector2()
+			var offset = Vector2()
+			if l.has("x"):
+				pos.x = float(l.x)
+			if l.has("y"):
+				pos.y = float(l.y)
+			if l.has("offsetx"):
+				offset.x = float(l.offsetx)
+			if l.has("offsety"):
+				offset.y = float(l.offsety)
+
+			var image_path = options.basedir.plus_file(l.image)
+			var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
+			var image = _load_image(image_path, target_dir, l.name + ".png")
+
+			if typeof(image) == TYPE_STRING:
+				return image
+
+			sprite.set_texture(image)
+			scene.add_child(sprite)
+			sprite.set_pos(pos + offset)
+			sprite.set_owner(scene)
+
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
 
@@ -450,7 +487,7 @@ func _parse_base64_layer(data):
 	return result
 
 # Load, copy and verify image
-func _load_image(source_img, target_folder, filename, width, height):
+func _load_image(source_img, target_folder, filename, width = false, height = false):
 	var dir = Directory.new()
 	if not dir.file_exists(source_img):
 		return 'Referenced image "%s" not found' % [source_img]
@@ -465,7 +502,7 @@ func _load_image(source_img, target_folder, filename, width, height):
 			return "Couldn't save tileset image %s" % [target_image]
 		image.take_over_path(target_image)
 
-	if image.get_width() != width or image.get_height() != height:
+	if (width and height) and (image.get_width() != width or image.get_height() != height):
 		return "Image dimensions don't match (%s)" % [source_img]
 	return image
 
