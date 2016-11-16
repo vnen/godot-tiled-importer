@@ -230,6 +230,9 @@ func build():
 				x = margin
 				y += int(tilesize.y) + spacing
 
+		if options.custom_properties and ts.has("properties") and ts.has("propertytypes"):
+			_set_meta(tileset, ts.properties, ts.propertytypes)
+
 		tileset.set_name(name)
 
 		if not options.single_tileset:
@@ -330,8 +333,14 @@ func build():
 
 			count += 1
 
+		if options.custom_properties and l.has("properties") and l.has("propertytypes"):
+			_set_meta(tilemap, l.properties, l.propertytypes)
+
 		scene.add_child(tilemap)
 		tilemap.set_owner(scene)
+
+	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
+		_set_meta(scene, data.properties, data.propertytypes)
 
 	return "OK"
 
@@ -455,6 +464,22 @@ func _load_image(source_img, target_folder, filename, width, height):
 	if image.get_width() != width or image.get_height() != height:
 		return "Image dimensions don't match (%s)" % [source_img]
 	return image
+
+# Parse the custom properties and set as meta of the objet
+func _set_meta(obj, properties, types):
+	for prop in properties:
+		var value = null
+		if types[prop].to_lower() == "bool":
+			value = bool(properties[prop])
+		elif types[prop].to_lower() == "color":
+			value = Color(properties[prop])
+		elif types[prop].to_lower() == "float":
+			value = float(properties[prop])
+		elif types[prop].to_lower() == "int":
+			value = int(properties[prop])
+		else:
+			value = str(properties[prop])
+		obj.set_meta(prop, value)
 
 # Read a .tmx file and build a dictionary in the same format as Tiled .json
 # This helps normalizing the data and using a single builder

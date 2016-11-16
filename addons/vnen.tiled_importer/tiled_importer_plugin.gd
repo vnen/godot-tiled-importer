@@ -61,6 +61,7 @@ func import(path, metadata):
 		"rel_path": metadata.get_option("rel_path"),
 		"image_flags": metadata.get_option("image_flags"),
 		"separate_img_dir": metadata.get_option("separate_img_dir"),
+		"custom_properties": metadata.get_option("custom_properties"),
 		"target": path,
 	}
 

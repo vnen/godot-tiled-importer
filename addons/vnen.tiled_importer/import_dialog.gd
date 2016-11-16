@@ -93,6 +93,13 @@ func _ready():
 			"text": "",
 			"flags": "Mipmaps,Repeat,Filter,Anistropic,sRGB,Mirrored Repeat",
 			"default": 0,
+		},
+		"custom_properties": {
+			"name": "Custom properties",
+			"tooltip": "Whether to import custom properties as meta data.",
+			"type": TreeItem.CELL_MODE_CHECK,
+			"text": "On",
+			"default": true,
 		}
 	}
 
