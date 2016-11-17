@@ -23,6 +23,11 @@ Then enable the plugin on the Project Settings.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
 * Custom import options, such as whether to embed the resources into the scene.
+* Support for image layers
+* Support for object layers, which are imported as StaticBody2D or LightOccluder2D
+  for shapes (depending on the `type` property) and as Sprite for tiles.
+* Custom properties for maps, layers, tilesets, and objects are imported as
+  metadata.
 
 ## Usage
 
@@ -48,6 +53,8 @@ TileSets will be on a relative folder or embedded, depending on the options.
 
 * Set the type of the object to `navigation` or `occluder` to use it as such.
 
+* Objects in object layer cannot be set as `navigation`.
+
 * Only polygons can be used as occluder/navigation. For those, you can make a
   polygon or polyline in Tiled. Rectangles will be converted to polygons, but
   ellipses are not accepted.
@@ -57,8 +64,6 @@ TileSets will be on a relative folder or embedded, depending on the options.
 
 * When creating a polygon or polyline in Tiled, do it in **clockwise order**.
   This is very important so Godot can properly recognize the shapes.
-
-* Object and image layers are currently ignored.
 
 * Godot has no decompression function (yet). So don't save the Tiled Map with
   any compressed format. "Base64 (uncompressed)" is also valid. You'll receive
@@ -85,6 +90,16 @@ The relative path from the target scene where to save the resources
 ### Image flags
 
 The image flags to apply to all imported TileSet images.
+
+### Create separate image directories
+
+When the TileSet is a collection of images, this option tells tp create a new
+directory with the TileSet name to hold all of the images.
+
+### Custom properties
+
+Whether or not to save the custom properties as metadata in the nodes and resources.
+
 
 ## License
 
