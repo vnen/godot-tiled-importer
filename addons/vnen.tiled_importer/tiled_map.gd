@@ -444,9 +444,19 @@ func build():
 							body.set_name(str(obj.id))
 
 						var collision
+						var offset = Vector2()
+						var rot_offset = 0
 						if not ("polygon" in obj or "polyline" in obj):
 							collision = CollisionShape2D.new()
 							collision.set_shape(shape)
+							if shape extends RectangleShape2D:
+								offset = shape.get_extents()
+							elif shape extends CircleShape2D:
+								offset = Vector2(shape.get_radius(), shape.get_radius())
+							elif shape extends CapsuleShape2D:
+								offset = Vector2(shape.get_radius(), shape.get_height())
+							collision.set_pos(-offset)
+							rot_offset = 180
 						else:
 							collision = CollisionPolygon2D.new()
 							var points = null
@@ -464,7 +474,11 @@ func build():
 						var rot = 0
 						if obj.has("rotation"):
 							rot = float(obj.rotation)
-						body.set_rotd(-rot)
+							if rot_offset != 0:
+								rot = rot_offset - rot
+							else:
+								rot = -rot
+						body.set_rotd(rot)
 
 						body.add_child(collision)
 						object.add_child(body)
