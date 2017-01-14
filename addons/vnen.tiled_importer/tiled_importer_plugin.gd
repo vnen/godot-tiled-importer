@@ -77,9 +77,18 @@ func import(path, metadata):
 	dir.make_dir_recursive(path.get_base_dir().plus_file(options.rel_path.substr(0, options.rel_path.length() - 1)))
 
 	var err = tiled_map.build()
-	if err != "OK":
-		return err
 
+	var f = File.new()
+	metadata.set_editor(PLUGIN_NAME)
+	metadata.set_source_md5(0, f.get_md5(src))
+
+	if err != "OK":
+		printerr(err)
+		if f.file_exists(path):
+			var res = ResourceLoader.load(path)
+			res.set_import_metadata(metadata)
+			ResourceSaver.save(path, res, ResourceSaver.FLAG_CHANGE_PATH)
+		return err
 	var scene = tiled_map.get_scene()
 
 	var packed_scene = PackedScene.new()
@@ -87,10 +96,6 @@ func import(path, metadata):
 	if err != OK:
 		return "Error packing scene"
 
-	var f = File.new()
-
-	metadata.set_editor(PLUGIN_NAME)
-	metadata.set_source_md5(0, f.get_md5(src))
 	packed_scene.set_import_metadata(metadata)
 
 	err = ResourceSaver.save(path, packed_scene, ResourceSaver.FLAG_CHANGE_PATH)
