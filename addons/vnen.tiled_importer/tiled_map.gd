@@ -586,7 +586,7 @@ func _shape_from_object(obj):
 			shape.set_polygon(vertices)
 			shape.set_closed("polygon" in obj)
 		else:
-			if vertices.size() == 3:
+			if _is_convex(vertices):
 				shape = ConvexPolygonShape2D.new()
 				shape.set_points(vertices)
 			else:
@@ -636,6 +636,26 @@ func _shape_from_object(obj):
 			shape.set_extents(size / 2)
 
 	return shape
+
+func _is_convex(polygon):
+	var size = polygon.size()
+	if size <= 3:
+		# Less than 3 verices can't be concave
+		return true
+
+	var cp = 0
+
+	for i in range(0, size + 2):
+		var p1 = polygon[(i + 0) % size]
+		var p2 = polygon[(i + 1) % size]
+		var p3 = polygon[(i + 2) % size]
+
+		var prev_cp = cp
+		cp = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x)
+		if i > 0 and sign(cp) != sign(prev_cp):
+			return false
+
+	return true
 
 func _parse_base64_layer(data):
 	var decoded = Marshalls.base64_to_raw(data)
