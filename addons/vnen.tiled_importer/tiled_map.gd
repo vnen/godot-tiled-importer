@@ -461,7 +461,12 @@ func build():
 							collision = CollisionPolygon2D.new()
 							var points = null
 							if shape extends ConcavePolygonShape2D:
-								points = shape.get_segments()
+								points = []
+								var segments = shape.get_segments()
+								for i in range(0, segments.size()):
+									if i % 2 != 0:
+										continue
+									points.push_back(segments[i])
 								collision.set_build_mode(1)
 							else:
 								points = shape.get_points()
@@ -592,6 +597,7 @@ func _shape_from_object(obj):
 		else:
 			if _is_convex(vertices):
 				shape = ConvexPolygonShape2D.new()
+				vertices = _sort_points_cw(vertices)
 				shape.set_points(vertices)
 			else:
 				shape = ConcavePolygonShape2D.new()
@@ -660,6 +666,50 @@ func _is_convex(polygon):
 			return false
 
 	return true
+
+# Sort the vertices of a convex polygon in clockwise order
+func _sort_points_cw(vertices):
+	vertices = Array(vertices)
+
+	var centroid = Vector2()
+	var size = vertices.size()
+
+	for i in range(0, size):
+		centroid += vertices[i]
+
+	centroid /= size
+
+	var sorter = PointSorter.new(centroid)
+	vertices.sort_custom(sorter, "is_less")
+
+	return Vector2Array(vertices)
+
+class PointSorter:
+	var center
+
+	func _init(c):
+		center = c
+
+	func is_less(a, b):
+		if a.x - center.x >= 0 and b.x - center.x < 0:
+			return false
+		elif a.x - center.x < 0 and b.x - center.x >= 0:
+			return true
+		elif a.x - center.x == 0 and b.x - center.x == 0:
+			if a.y - center.y >= 0 or b.y - center.y >= 0:
+				return a.y < b.y
+			return a.y > b.y
+
+		var det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y)
+		if det > 0:
+			return true
+		elif det < 0:
+			return false
+
+		var d1 = (a - center).length_squared()
+		var d2 = (b - center).length_squared()
+
+		return d1 < d2
 
 func _parse_base64_layer(data):
 	var decoded = Marshalls.base64_to_raw(data)
