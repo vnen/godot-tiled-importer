@@ -26,6 +26,7 @@ extends ConfirmationDialog
 var options
 var origin_fd
 var target_fd
+var script_fd
 var popup_menu
 var import_plugin
 
@@ -39,6 +40,7 @@ func configure(plugin, tgt_path, metadata):
 		var src_path = import_plugin.expand_source_path(metadata.get_source_path(0))
 		get_node("MainDialog/Origin/Path").set_text(src_path)
 		get_node("MainDialog/Target/Path").set_text(tgt_path)
+		get_node("MainDialog/PostImportScript/Path").set_text(str(metadata.get_option("post_script")))
 
 		for opt_code in options:
 			var opt = options[opt_code]
@@ -119,6 +121,13 @@ func _ready():
 	target_fd.add_filter("*.scn;Scene")
 	target_fd.connect("file_selected", self, "_on_target_selected")
 	add_child(target_fd)
+
+	script_fd = FileDialog.new()
+	script_fd.set_mode(FileDialog.MODE_OPEN_FILE)
+	script_fd.set_access(FileDialog.ACCESS_RESOURCES)
+	script_fd.add_filter("*.gd;GDScript")
+	script_fd.connect("file_selected", self, "_on_script_selected")
+	add_child(script_fd)
 
 	popup_menu = PopupMenu.new()
 	popup_menu.connect("item_pressed", self, "_on_popup_item_pressed")
@@ -247,11 +256,17 @@ func _on_origin_browse_pressed():
 func _on_target_browse_pressed():
 	target_fd.popup_centered_ratio()
 
+func _on_script_browse_pressed():
+	script_fd.popup_centered_ratio()
+
 func _on_origin_selected(path):
 	get_node("MainDialog/Origin/Path").set_text(path)
 
 func _on_target_selected(path):
 	get_node("MainDialog/Target/Path").set_text(path)
+
+func _on_script_selected(path):
+	get_node("MainDialog/PostImportScript/Path").set_text(path)
 
 
 func _on_ImportTilemap_confirmed():
@@ -264,6 +279,7 @@ func _on_ImportTilemap_confirmed():
 
 	var imd = ResourceImportMetadata.new()
 	imd.add_source(get_node("MainDialog/Origin/Path").get_text())
+	imd.set_option("post_script", get_node("MainDialog/PostImportScript/Path").get_text().strip_edges())
 
 	for opt_code in options:
 		var opt = options[opt_code]

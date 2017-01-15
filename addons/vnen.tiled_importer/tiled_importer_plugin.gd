@@ -62,6 +62,7 @@ func import(path, metadata):
 		"image_flags": metadata.get_option("image_flags"),
 		"separate_img_dir": metadata.get_option("separate_img_dir"),
 		"custom_properties": metadata.get_option("custom_properties"),
+		"post_script": str(metadata.get_option("post_script")).strip_edges(),
 		"target": path,
 	}
 
@@ -90,6 +91,21 @@ func import(path, metadata):
 			ResourceSaver.save(path, res, ResourceSaver.FLAG_CHANGE_PATH)
 		return err
 	var scene = tiled_map.get_scene()
+
+	if not options["post_script"].empty():
+
+		var script = load(options["post_script"])
+		if not script or not script extends GDScript:
+			return "Error loading post import script"
+
+		script = script.new()
+		if not script.has_method("post_import"):
+			return 'Script doesn\'t have "post_import" method'
+
+		scene = script.post_import(scene)
+
+		if scene == null or not scene extends Node2D:
+			return "Invalid scene returned from post import script"
 
 	var packed_scene = PackedScene.new()
 	err = packed_scene.pack(scene)
