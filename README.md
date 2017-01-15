@@ -28,6 +28,7 @@ Then enable the plugin on the Project Settings.
   for shapes (depending on the `type` property) and as Sprite for tiles.
 * Custom properties for maps, layers, tilesets, and objects are imported as
   metadata.
+* Support for post-import script.
 
 ## Usage
 
@@ -62,14 +63,19 @@ TileSets will be on a relative folder or embedded, depending on the options.
 * Occluder shapes are set as closed if a polygon is used and as open if it is
   a polyline.
 
-* When creating a polygon or polyline in Tiled, do it in **clockwise order**.
-  This is very important so Godot can properly recognize the shapes.
-
 * Godot has no decompression function (yet). So don't save the Tiled Map with
   any compressed format. "Base64 (uncompressed)" is also valid. You'll receive
   an error message if compressed data is detected.
 
 ## Options
+
+### Post-import script
+
+The selected script will have it's `post_import(scene)` method run. This
+enables you to change the generated scene automatically upon each reimport.
+
+The `post_import` method will receive the built scene and **must** return the
+changed scene.
 
 ### Single TileSet
 
