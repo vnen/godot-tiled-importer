@@ -462,8 +462,10 @@ func build():
 							var points = null
 							if shape extends ConcavePolygonShape2D:
 								points = shape.get_segments()
+								collision.set_build_mode(1)
 							else:
 								points = shape.get_points()
+								collision.set_build_mode(0)
 							collision.set_polygon(points)
 
 						var obj_visible = true
@@ -479,6 +481,8 @@ func build():
 							else:
 								rot = -rot
 						body.set_rotd(rot)
+
+						body.add_shape(shape, Matrix32(0, -offset))
 
 						body.add_child(collision)
 						object.add_child(body)
