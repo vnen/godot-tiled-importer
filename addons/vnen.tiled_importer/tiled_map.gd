@@ -192,7 +192,7 @@ func build():
 				tileset.tile_set_texture(gid, image)
 				tileset.tile_set_region(gid, region)
 
-			var rel_id = str(gid - firstgid)
+			var rel_id = gid - firstgid
 
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
