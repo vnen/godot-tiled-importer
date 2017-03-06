@@ -164,7 +164,11 @@ func build():
 			return "Missing tile count (%s)" % [name]
 		if ts.has("image"):
 			has_global_img = true
-			image_path = options.basedir.plus_file(ts.image)
+			var dir = Directory.new()
+			if(dir.file_exists(ts.image)):
+				image_path = ts.image
+			else:
+				image_path = options.basedir.plus_file(ts.image)
 			target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 			image = _load_image(image_path, target_dir, name + ".png", image_w, image_h)
 			if typeof(image) == TYPE_STRING:
