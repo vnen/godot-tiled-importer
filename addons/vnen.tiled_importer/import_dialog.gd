@@ -118,7 +118,8 @@ func _ready():
 	target_fd = EditorFileDialog.new()
 	target_fd.set_mode(EditorFileDialog.MODE_SAVE_FILE)
 	target_fd.set_access(EditorFileDialog.ACCESS_RESOURCES)
-	target_fd.add_filter("*.scn;Scene")
+	target_fd.add_filter("*.scn;SCN")
+	target_fd.add_filter("*.tscn;TSCN")
 	target_fd.connect("file_selected", self, "_on_target_selected")
 	add_child(target_fd)
 
@@ -201,8 +202,9 @@ func validate_options():
 		return "Target path must be absolute."
 	if not target_path.to_lower().begins_with("res://"):
 		return "Target must be inside the res:// path."
-	if not target_path.to_lower().ends_with(".scn"):
-		return "Target must be a .scn scene file."
+
+	if not (target_path.to_lower().extension() == "tscn" or  target_path.to_lower().extension() == "scn"):
+		return "Target must be a scene file."
 
 	if options.embed.item.is_checked(1) and (
 			not rel_res_path.is_rel_path()
