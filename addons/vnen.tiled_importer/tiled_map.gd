@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2016 George Marques
+# Copyright (c) 2017 George Marques
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -455,18 +455,18 @@ func build():
 						if not ("polygon" in obj or "polyline" in obj):
 							collision = CollisionShape2D.new()
 							collision.set_shape(shape)
-							if shape extends RectangleShape2D:
+							if shape is RectangleShape2D:
 								offset = shape.get_extents()
-							elif shape extends CircleShape2D:
+							elif shape is CircleShape2D:
 								offset = Vector2(shape.get_radius(), shape.get_radius())
-							elif shape extends CapsuleShape2D:
+							elif shape is CapsuleShape2D:
 								offset = Vector2(shape.get_radius(), shape.get_height())
 							collision.set_pos(-offset)
 							rot_offset = 180
 						else:
 							collision = CollisionPolygon2D.new()
 							var points = null
-							if shape extends ConcavePolygonShape2D:
+							if shape is ConcavePolygonShape2D:
 								points = []
 								var segments = shape.get_segments()
 								for i in range(0, segments.size()):
