@@ -36,7 +36,6 @@ func _enter_tree():
 func _exit_tree():
 	remove_import_plugin(import_plugin)
 	import_plugin = null
-	pass
 
 func update_resources():
 	get_resource_filesystem().disconnect("filesystem_changed", self, "update_resources")

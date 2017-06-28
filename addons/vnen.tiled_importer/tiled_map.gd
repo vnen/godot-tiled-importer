@@ -41,12 +41,12 @@ func init(p_source, p_options):
 	source = p_source
 	options = p_options
 
-	options.name = source.basename()
+	options.name = source.get_basename()
 	options.basedir = source.get_base_dir()
 
 func get_data():
 
-	if source.extension() == "json":
+	if source.get_extension() == "json":
 		var f = File.new()
 		if f.open(source, File.READ) != OK:
 			return "Couldn't open source file"
@@ -54,7 +54,8 @@ func get_data():
 		var tiled_raw_data = f.get_as_text()
 		f.close()
 
-		if data.parse_json(tiled_raw_data) != OK:
+		data = parse_json(tiled_raw_data)
+		if typeof(data) != TYPE_DICTIONARY:
 			return "Couldn't parse the source file"
 	else:
 		data = _tmx_to_dict(source)
@@ -75,7 +76,7 @@ func build():
 	if not data.has("tileheight") or not data.has("tilewidth"):
 		return 'Invalid Tiled data: missing "tileheight" or "tilewidth" keys.'
 
-	var basename = options.target.substr(options.target.find_last('/'), options.target.length()).basename()
+	var basename = options.target.substr(options.target.find_last('/'), options.target.length()).get_basename()
 
 	var map_size = Vector2(int(data.width), int(data.height))
 	var cell_size = Vector2(int(data.tilewidth), int(data.tileheight))
@@ -95,15 +96,14 @@ func build():
 		if tstemp.has("source"):
 			var err = OK
 			var tileset_src = source.get_base_dir().plus_file(tstemp.source) if tstemp.source.is_rel_path() else tstemp.source
-			if tileset_src.extension() == "json":
+			if tileset_src.get_extension() == "json":
 				var f = File.new()
 				err = f.open(tileset_src, File.READ)
 				if err != OK:
 					return "Couldn't open tileset file %s." % [tileset_src]
 
-				ts = {}
-				err = ts.parse_json(f.get_as_text())
-				if err != OK:
+				ts = parse_json(f.get_as_text())
+				if typeof(ts) != TYPE_DICTIONARY:
 					return "Couldn't parse tileset file %s." % [tileset_src]
 			else:
 				var tsparser = XMLParser.new()
@@ -202,7 +202,7 @@ func build():
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
 				image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
-				_img = _img.get_file().basename()
+				_img = _img.get_file().get_basename()
 				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
 				if typeof(image) == TYPE_STRING:
 					return image
@@ -272,7 +272,7 @@ func build():
 	# TileSets done, creating the target scene
 
 	scene = Node2D.new()
-	scene.set_name(basename)
+	scene.set_name(basename.substr(0,4));
 
 	for l in data.layers:
 		if l.has("compression"):
@@ -306,16 +306,16 @@ func build():
 
 			var tilemap = TileMap.new()
 			tilemap.set_name(name)
-			tilemap.set_cell_size(cell_size)
-			tilemap.set_opacity(opacity)
-			tilemap.set_hidden(not visible)
-			tilemap.set_mode(map_mode)
+			tilemap.cell_size = cell_size
+			tilemap.modulate = Color(1, 1, 1, opacity)
+			tilemap.visible = visible
+			tilemap.mode = map_mode
 
 			var offset = Vector2()
 			if l.has("offsetx") and l.has("offsety"):
 				offset = Vector2(int(l.offsetx), int(l.offsety))
 
-			tilemap.set_pos(offset)
+			tilemap.position = offset
 
 			var firstgid = 0
 			tilemap.set_tileset(_tileset_from_gid(firstgid))
@@ -811,15 +811,14 @@ func _tmx_to_dict(path):
 					var tileset_data = _attributes_to_dict(parser)
 					var tileset_src = path.get_base_dir().plus_file(tileset_data.source) if tileset_data.source.is_rel_path() else tileset_data.source
 
-					if tileset_src.extension() == "json":
+					if tileset_src.get_extension() == "json":
 						var f = File.new()
 						err = f.open(tileset_src, File.READ)
 						if err != OK:
 							return "Couldn't open tileset file %s." % [tileset_src]
 
-						var ts = {}
-						err = ts.parse_json(f.get_as_text())
-						if err != OK:
+						var ts = parse_json(f.get_as_text())
+						if typeof(ts) != TYPE_DICTIONARY:
 							return "Couldn't parse tileset file %s." % [tileset_src]
 
 						ts.firstgid = int(tileset_data.firstgid)
