@@ -590,6 +590,8 @@ func _shape_from_object(obj):
 		if obj.type == "navigation":
 			shape = NavigationPolygon.new()
 			shape.set_vertices(vertices)
+			shape.add_outline(vertices)
+			shape.make_polygons_from_outlines()
 		elif obj.type == "occluder":
 			shape = OccluderPolygon2D.new()
 			shape.set_polygon(vertices)
@@ -634,10 +636,11 @@ func _shape_from_object(obj):
 				size,
 				Vector2(0, size.height),
 			])
-
 			if obj.type == "navigation":
 				shape = NavigationPolygon.new()
 				shape.set_vertices(vertices)
+				shape.add_outline(vertices)
+				shape.make_polygons_from_outlines()
 			else:
 				shape = OccluderPolygon2D.new()
 				shape.set_polygon(vertices)
