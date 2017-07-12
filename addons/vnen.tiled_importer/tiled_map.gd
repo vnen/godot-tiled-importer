@@ -94,7 +94,7 @@ func build():
 		var ts = tstemp
 		if tstemp.has("source"):
 			var err = OK
-			var tileset_src = source.get_base_dir().plus_file(tstemp.source)
+			var tileset_src = source.get_base_dir().plus_file(tstemp.source) if tstemp.source.is_rel_path() else tstemp.source
 			if tileset_src.extension() == "json":
 				var f = File.new()
 				err = f.open(tileset_src, File.READ)
@@ -164,7 +164,7 @@ func build():
 			return "Missing tile count (%s)" % [name]
 		if ts.has("image"):
 			has_global_img = true
-			image_path = options.basedir.plus_file(ts.image)
+			image_path = options.basedir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
 			target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 			image = _load_image(image_path, target_dir, name + ".png", image_w, image_h)
 			if typeof(image) == TYPE_STRING:
@@ -201,7 +201,7 @@ func build():
 
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
-				image_path = options.basedir.plus_file(_img)
+				image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
 				_img = _img.get_file().basename()
 				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
 				if typeof(image) == TYPE_STRING:
@@ -369,7 +369,7 @@ func build():
 			if l.has("offsety"):
 				offset.y = float(l.offsety)
 
-			var image_path = options.basedir.plus_file(l.image)
+			var image_path = options.basedir.plus_file(l.image) if l.image.is_rel_path() else l.image
 			var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 			var image = _load_image(image_path, target_dir, l.name + ".png")
 
@@ -811,7 +811,7 @@ func _tmx_to_dict(path):
 					data.tilesets.push_back(tileset)
 				else:
 					var tileset_data = _attributes_to_dict(parser)
-					var tileset_src = path.get_base_dir().plus_file(tileset_data.source)
+					var tileset_src = path.get_base_dir().plus_file(tileset_data.source) if tileset_data.source.is_rel_path() else tileset_data.source
 
 					if tileset_src.extension() == "json":
 						var f = File.new()
