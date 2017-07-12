@@ -751,8 +751,6 @@ func _load_image(source_img, target_folder, filename, width = false, height = fa
 			return "Couldn't save tileset image %s" % [target_image]
 		image.take_over_path(target_image)
 
-	if (width and height) and (image.get_width() != width or image.get_height() != height):
-		return "Image dimensions don't match (%s)" % [source_img]
 	return image
 
 # Parse the custom properties and set as meta of the objet
