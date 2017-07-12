@@ -182,7 +182,8 @@ func build():
 		var x = margin
 		var y = margin
 
-		for i in range(tilecount):
+		var i = 0
+		while i < tilecount:
 
 			var tilepos = Vector2(x,y)
 			var region = Rect2(tilepos, tilesize)
@@ -193,6 +194,10 @@ func build():
 				tileset.tile_set_region(gid, region)
 
 			var rel_id = str(gid - firstgid)
+
+			if not rel_id in ts.tiles:
+				gid += 1
+				continue
 
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
@@ -225,6 +230,7 @@ func build():
 						tileset.tile_set_shape_offset(gid, offset)
 
 			gid += 1
+			i += 1
 			x += int(tilesize.x) + spacing
 			if x >= image_w - margin:
 				x = margin
@@ -740,7 +746,7 @@ func _load_image(source_img, target_folder, filename, width = false, height = fa
 
 	if not options.embed:
 		var target_image = target_folder.plus_file(filename)
-		var err = ResourceSaver.save(target_image, image, ResourceSaver.FLAG_CHANGE_PATH)
+		var err = ResourceSaver.save(target_image, image)
 		if err != OK:
 			return "Couldn't save tileset image %s" % [target_image]
 		image.take_over_path(target_image)
