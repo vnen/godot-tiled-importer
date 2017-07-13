@@ -339,7 +339,7 @@ func build():
 					firstgid = gid
 					tilemap.set_tileset(_tileset_from_gid(firstgid))
 
-				var cell_pos = Vector2(count % int(map_size.width), int(count / map_size.width))
+				var cell_pos = Vector2(count % int(map_size.x), int(count / map_size.x))
 				tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
 
 				count += 1
@@ -376,11 +376,11 @@ func build():
 			if typeof(image) == TYPE_STRING:
 				return image
 
-			sprite.set_texture(image)
-			sprite.set_opacity(opacity)
-			sprite.set_hidden(not visible)
+			sprite.texture = image
+			sprite.modulate = Color(1, 1, 1, opacity)
+			sprite.visible = visible
 			scene.add_child(sprite)
-			sprite.set_pos(pos + offset)
+			sprite.position = pos + offset
 			sprite.set_owner(scene)
 
 		elif l.type == "objectgroup":
