@@ -26,6 +26,11 @@ extends EditorImportPlugin
 const TiledMap = preload("res://addons/vnen.tiled_importer/tiled_map.gd")
 const PLUGIN_NAME = "org.vnen.tiled_importer"
 
+var base_plugin = null
+
+func config(b):
+	base_plugin = b
+
 func get_preset_count():
 	return 0
 
@@ -87,7 +92,13 @@ func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	if err != OK:
 		return err
 
-	return ResourceSaver.save(full_path, packed_scene, ResourceSaver.FLAG_CHANGE_PATH)
+	err = ResourceSaver.save(full_path, packed_scene)
+
+	if err != OK:
+		return err
+
+	base_plugin.reload_scene(source_file)
+	return OK
 
 func get_option_visibility(option, options):
 	return true

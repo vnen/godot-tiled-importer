@@ -31,7 +31,11 @@ func get_name():
 func _enter_tree():
 	get_resource_filesystem().connect("filesystem_changed", self, "update_resources")
 	import_plugin = preload("tiled_importer_plugin.gd").new()
+	import_plugin.config(self)
 	add_import_plugin(import_plugin)
+
+func reload_scene(path):
+	reload_scene_from_path(path)
 
 func _exit_tree():
 	remove_import_plugin(import_plugin)
