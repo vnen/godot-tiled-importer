@@ -274,9 +274,8 @@ func build():
 	scene = Node2D.new()
 	scene.set_name(basename.substr(0,4));
 
-	for l in data.layers:
-		if l.has("compression"):
-			return 'Tiled compressed format is not supported. Change your Map properties to a format without compression.'
+	for layer in data.layers:
+		var l = layer
 
 		if not l.has("type"):
 			return 'Invalid Tiled data: missing "type" key on layer.'
@@ -302,7 +301,14 @@ func build():
 			if "encoding" in l:
 				if l.encoding != "base64":
 					return 'Unsupported layer data encoding. Use Base64 or no enconding.'
-				layer_data = _parse_base64_layer(l.data)
+				else:
+					if l.has("compression"):
+						var layer_size = int(l.width) * int(l.height) * 4
+						layer_data = _parse_encoded_layer(l.data, l.compression, layer_size)
+					else:
+						layer_data = _parse_encoded_layer(l.data)
+					if typeof(layer_data) == TYPE_STRING:
+						return layer_data
 
 			var tilemap = TileMap.new()
 			tilemap.set_name(name)
@@ -720,10 +726,19 @@ class PointSorter:
 
 		return d1 < d2
 
-func _parse_base64_layer(data):
+func _parse_encoded_layer(data, compression = "", buffer_size = 0):
 	var decoded = Marshalls.base64_to_raw(data)
-
 	var result = []
+
+	if compression != "":
+		var compression_mode
+		match compression:
+			"zlib": compression_mode = File.COMPRESSION_DEFLATE
+			_: return "Unsupported compression type: " + compression
+
+		decoded = decoded.decompress(buffer_size, compression_mode)
+		if decoded.size() == 0:
+			return "Error decompressing the data"
 
 	for i in range(0, decoded.size(), 4):
 
