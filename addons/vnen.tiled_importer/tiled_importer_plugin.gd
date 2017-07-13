@@ -44,7 +44,14 @@ func get_save_extension():
 	return 'scn'
 
 func get_import_options(preset):
-	return []
+	return [
+		{
+			"name": "textures/image_flags",
+			"default_value": 0,
+			"property_hint": PROPERTY_HINT_FLAGS,
+			"hint_string": "Mipmaps,Repeat,Filter,Anisotropic Filter,Convert to Linear,Mirrored Repeat"
+		}
+	]
 
 func get_visible_name():
 	return "Tiled Map as Scene"
@@ -57,13 +64,14 @@ func get_importer_name():
 
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 
+	print("import_options ", options)
 	var tiled_map = TiledMap.new()
 	var full_path = save_path + "." + get_save_extension()
 	var my_options = {
 		"single_tileset": true,
 		"embed": true,
 		"rel_path": "",
-		"image_flags": 0,
+		"image_flags": options["textures/image_flags"],
 		"separate_img_dir": false,
 		"custom_properties": true,
 		"post_script": "",
