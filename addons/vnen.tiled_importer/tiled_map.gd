@@ -188,14 +188,13 @@ func build():
 			var tilepos = Vector2(x,y)
 			var region = Rect2(tilepos, tilesize)
 
+			var rel_id = str(gid - firstgid)
+
 			tileset.create_tile(gid)
 			if has_global_img:
 				tileset.tile_set_texture(gid, image)
 				tileset.tile_set_region(gid, region)
-
-			var rel_id = str(gid - firstgid)
-
-			if not rel_id in ts.tiles:
+			elif not rel_id in ts.tiles:
 				gid += 1
 				continue
 
