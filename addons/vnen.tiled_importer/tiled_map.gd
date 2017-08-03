@@ -966,7 +966,11 @@ func _parse_object(parser):
 					break
 
 			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
-				if parser.get_node_name() == "ellipse":
+				if parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					data["properties"] = prop_data.properties
+					data["propertytypes"] = prop_data.propertytypes
+				elif parser.get_node_name() == "ellipse":
 					data.ellipse = true
 				elif parser.get_node_name() == "polygon" or parser.get_node_name() == "polyline":
 					var points = []
