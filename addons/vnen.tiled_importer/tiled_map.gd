@@ -517,10 +517,11 @@ func build():
 					if tileset == null:
 						return "Invalid GID in object layer tile"
 
+					var is_tile_object = tileset.tile_get_region(tileid) == Rect2(0, 0, 0, 0)
 					var sprite = Sprite.new()
 					sprite.set_texture(tileset.tile_get_texture(tileid))
 
-					if not tileset.tile_get_region(tileid) == Rect2(0, 0, 0, 0):
+					if not is_tile_object:
 						sprite.set_region(true)
 						sprite.set_region_rect(tileset.tile_get_region(tileid))
 
@@ -539,6 +540,11 @@ func build():
 						pos.x = float(obj.x)
 					if obj.has("y"):
 						pos.y = float(obj.y)
+					if is_tile_object:
+						# Tile object positions are oriented bottom left.
+						# If we import their positioning data as is, their position ends up skewed incorrectly.
+						pos.x = pos.x + float(obj.width) / 2
+						pos.y = pos.y - float(obj.height) / 2
 					sprite.set_pos(pos)
 
 					var rot = 0
