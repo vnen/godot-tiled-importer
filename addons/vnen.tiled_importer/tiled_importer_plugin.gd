@@ -60,6 +60,7 @@ func import(path, metadata):
 		"embed": metadata.get_option("embed"),
 		"rel_path": metadata.get_option("rel_path"),
 		"image_flags": metadata.get_option("image_flags"),
+		"keep_img": metadata.get_option("keep_img"),
 		"separate_img_dir": metadata.get_option("separate_img_dir"),
 		"custom_properties": metadata.get_option("custom_properties"),
 		"post_script": str(metadata.get_option("post_script")).strip_edges(),
