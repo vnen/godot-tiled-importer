@@ -558,8 +558,14 @@ func build():
 					object.add_child(sprite)
 					sprite.set_owner(scene)
 
-					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
-						_set_meta(sprite, obj.properties, obj.propertytypes)
+					if options.custom_properties:
+						var tile = _tile_from_gid(tile_raw_id)
+
+						if tile != null and tile.has("properties") and tile.has("propertytypes"):
+							_set_meta(sprite, tile.properties, tile.propertytypes)
+
+						if obj.has("properties") and obj.has("propertytypes"):
+							_set_meta(sprite, obj.properties, obj.propertytypes)
 
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
@@ -581,6 +587,15 @@ func _tileset_from_gid(gid):
 		var map = tile_id_mapping[map_id]
 		if gid >= map.firstgid and gid < (map.firstgid + map.tilecount):
 			return map.tileset
+
+	return null
+
+# Get a tile based on the global tile id
+func _tile_from_gid(gid):
+	for tileset in data.tilesets:
+		if gid >= tileset.firstgid and gid < (tileset.firstgid + tileset.tilecount):
+			var rel_id = str(gid - tileset.firstgid)
+			return tileset.tiles[rel_id]
 
 	return null
 
@@ -961,6 +976,10 @@ func _parse_tile_data(parser):
 					obj_group.objects = []
 				var obj = _parse_object(parser)
 				obj_group.objects.push_back(obj)
+			elif parser.get_node_name() == "properties":
+				var prop_data = _parse_properties(parser)
+				data["properties"] = prop_data.properties
+				data["propertytypes"] = prop_data.propertytypes
 
 		err = parser.read()
 
