@@ -751,10 +751,16 @@ func _load_image(source_img, target_folder, filename, width = false, height = fa
 
 	if not options.embed:
 		var target_image = target_folder.plus_file(filename)
-		var err = ResourceSaver.save(target_image, image)
-		if err != OK:
-			return "Couldn't save tileset image %s" % [target_image]
-		image.take_over_path(target_image)
+		if not options.keep_img:
+			var err = ResourceSaver.save(target_image, image)
+			if err != OK:
+				return "Couldn't save tileset image %s" % [target_image]
+			image.take_over_path(target_image)
+		# .flags files must be generated and so images must be (re)saved with the ResourceSaver
+		else:
+			var err = ResourceSaver.save(source_img, image)
+			if err != OK:
+				return "Couldn't save tileset image %s" % [source_img]
 
 	return image
 

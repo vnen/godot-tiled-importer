@@ -81,6 +81,13 @@ func _ready():
 			"text": "",
 			"default": "tilesets/",
 		},
+		"keep_img": {
+			"name": "Don't save images",
+			"tooltip": "Don't save images. Keep them at their current locations.",
+			"type": TreeItem.CELL_MODE_CHECK,
+			"text": "On",
+			"default": false,
+		},
 		"separate_img_dir": {
 			"name": "Create separate image directories",
 			"tooltip": "Create a directory per TileSet when using image collection sets.",
