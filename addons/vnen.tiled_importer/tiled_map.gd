@@ -121,7 +121,11 @@ func build():
 					return "Error parsing tileset file %s." % [tileset_src]
 
 				ts = _parse_tileset(tsparser)
+			ts.source_dir = tileset_src.get_base_dir()
 			ts.firstgid = int(tstemp.firstgid)
+
+		if not ts.has("source_dir"):
+			ts.source_dir = options.basedir
 
 		var tileset = null
 		if options.single_tileset:
@@ -164,7 +168,7 @@ func build():
 			return "Missing tile count (%s)" % [name]
 		if ts.has("image"):
 			has_global_img = true
-			image_path = options.basedir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
+			image_path = ts.source_dir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
 			target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 			image = _load_image(image_path, target_dir, name + ".png", image_w, image_h)
 			if typeof(image) == TYPE_STRING:
@@ -824,6 +828,7 @@ func _tmx_to_dict(path):
 							return "Couldn't parse tileset file %s." % [tileset_src]
 
 						ts.firstgid = int(tileset_data.firstgid)
+						ts.source_dir = tileset_src.get_base_dir()
 						data.tilesets.push_back(ts)
 
 					else:
@@ -843,6 +848,7 @@ func _tmx_to_dict(path):
 
 						var ts = _parse_tileset(tsparser)
 						ts.firstgid = int(tileset_data.firstgid)
+						ts.source_dir = tileset_src.get_base_dir()
 						data.tilesets.push_back(ts)
 
 			elif parser.get_node_name() == "layer":
