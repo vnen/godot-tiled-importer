@@ -519,8 +519,10 @@ func build():
 
 					var sprite = Sprite.new()
 					sprite.set_texture(tileset.tile_get_texture(tileid))
-					sprite.set_region(true)
-					sprite.set_region_rect(tileset.tile_get_region(tileid))
+
+					if not tileset.tile_get_region(tileid) == Rect2(0, 0, 0, 0):
+						sprite.set_region(true)
+						sprite.set_region_rect(tileset.tile_get_region(tileid))
 
 					if obj.has("name") and not obj.name.empty():
 						sprite.set_name(obj.name);
