@@ -204,7 +204,7 @@ func build():
 
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
-				image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
+				image_path = ts.source_dir.plus_file(_img) if _img.is_rel_path() else _img
 				_img = _img.get_file().basename()
 				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
 				if typeof(image) == TYPE_STRING:
