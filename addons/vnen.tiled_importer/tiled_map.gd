@@ -140,7 +140,6 @@ func build():
 		var name = ""
 		var tilesize = Vector2()
 		var tilecount = 0
-		var tile_obj_count = 0
 		var has_global_img = false
 
 		if ts.has("spacing"):
@@ -206,7 +205,7 @@ func build():
 							return image
 						tileset.tile_set_texture(gid, image)
 		
-					if rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
+					if "objectgroup" in ts.tiles[rel_id] \
 					                 and "objects" in ts.tiles[rel_id].objectgroup:
 						for obj in ts.tiles[rel_id].objectgroup.objects:
 							var shape = _shape_from_object(obj)
