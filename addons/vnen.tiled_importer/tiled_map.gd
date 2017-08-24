@@ -140,6 +140,7 @@ func build():
 		var name = ""
 		var tilesize = Vector2()
 		var tilecount = 0
+		var tile_obj_count = 0
 		var has_global_img = false
 
 		if ts.has("spacing"):
@@ -176,7 +177,7 @@ func build():
 					Directory.new().make_dir_recursive(target_dir)
 			else:
 				target_dir = options.target.get_base_dir().plus_file(options.rel_path)
-
+				
 		var gid = firstgid
 
 		var x = margin
@@ -194,41 +195,38 @@ func build():
 				tileset.tile_set_region(gid, region)
 
 			var rel_id = str(gid - firstgid)
-
-			if not rel_id in ts.tiles:
-				gid += 1
-				continue
-
-			if not has_global_img and "image" in ts.tiles[rel_id]:
-				var _img = ts.tiles[rel_id].image
-				image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
-				_img = _img.get_file().get_basename()
-				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
-				if typeof(image) == TYPE_STRING:
-					return image
-				tileset.tile_set_texture(gid, image)
-
-			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
-			                 and "objects" in ts.tiles[rel_id].objectgroup:
-				for obj in ts.tiles[rel_id].objectgroup.objects:
-					var shape = _shape_from_object(obj)
-
-					if typeof(shape) == TYPE_STRING:
-						return "Error on shape data in tileset %s:\n%s" % [name, shape]
-
-					var offset = Vector2(int(obj.x), int(obj.y))
-					offset += Vector2(int(obj.width) / 2, int(obj.height) / 2)
-
-					if obj.type == "navigation":
-						tileset.tile_set_navigation_polygon(gid, shape)
-						tileset.tile_set_navigation_polygon_offset(gid, offset)
-					elif obj.type == "occluder":
-						tileset.tile_set_light_occluder(gid, shape)
-						tileset.tile_set_occluder_offset(gid, offset)
-					else:
-						tileset.tile_set_shape(gid, shape)
-						tileset.tile_set_shape_offset(gid, offset)
-
+			if ts.has("tiles"):
+				if rel_id in ts.tiles:
+					if not has_global_img and "image" in ts.tiles[rel_id]:
+						var _img = ts.tiles[rel_id].image
+						image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
+						_img = _img.get_file().get_basename()
+						image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
+						if typeof(image) == TYPE_STRING:
+							return image
+						tileset.tile_set_texture(gid, image)
+		
+					if rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
+					                 and "objects" in ts.tiles[rel_id].objectgroup:
+						for obj in ts.tiles[rel_id].objectgroup.objects:
+							var shape = _shape_from_object(obj)
+		
+							if typeof(shape) == TYPE_STRING:
+								return "Error on shape data in tileset %s:\n%s" % [name, shape]
+		
+							var offset = Vector2(int(obj.x), int(obj.y))
+							offset += Vector2(int(obj.width) / 2, int(obj.height) / 2)
+		
+							if obj.type == "navigation":
+								tileset.tile_set_navigation_polygon(gid, shape)
+								tileset.tile_set_navigation_polygon_offset(gid, offset)
+							elif obj.type == "occluder":
+								tileset.tile_set_light_occluder(gid, shape)
+								tileset.tile_set_occluder_offset(gid, offset)
+							else:
+								var shape_id = tileset.tile_get_shape_count(gid)
+								tileset.tile_set_shape(gid, shape_id, shape)
+								tileset.tile_set_shape_transform(gid, shape_id, Transform2D(0, offset))
 			gid += 1
 			i += 1
 			x += int(tilesize.x) + spacing
