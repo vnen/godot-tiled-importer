@@ -1022,7 +1022,12 @@ func _parse_object(parser):
 						})
 
 					data[parser.get_node_name()] = points
-
+				elif parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					if typeof(prop_data) == TYPE_STRING:
+						return prop_data
+					data.properties = prop_data.properties
+					data.propertytypes = prop_data.propertytypes
 			err = parser.read()
 
 	for attr in ["width", "height", "x", "y", "rotation"]:
