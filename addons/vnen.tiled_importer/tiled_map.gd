@@ -182,6 +182,8 @@ func build():
 				target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 
 		var gid = firstgid
+		
+		var tile_meta = {}
 
 		var x = margin
 		var y = margin
@@ -232,6 +234,25 @@ func build():
 						tileset.tile_set_shape(gid, shape)
 						tileset.tile_set_shape_offset(gid, offset)
 
+			if "tiles" in ts and rel_id in ts.tiles and "properties" in ts.tiles[rel_id] and "propertytypes" in ts.tiles[rel_id]:
+				# If the tile has properties, create a dict with them and then save that new dict to the tile_meta dict using its gid
+				var tile_props = ts.tiles[rel_id].properties
+				var tile_prop_types = ts.tiles[rel_id].propertytypes
+				var tile_prop_dict = {}
+				for tile_prop_name in tile_props:
+					if tile_prop_types[tile_prop_name].to_lower() == "bool":
+						tile_prop_dict[tile_prop_name] = bool(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "color":
+						tile_prop_dict[tile_prop_name] = Color(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "float":
+						tile_prop_dict[tile_prop_name] = float(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "int":
+						tile_prop_dict[tile_prop_name] = int(tile_props[tile_prop_name])
+					else:
+						tile_prop_dict[tile_prop_name] = str(tile_props[tile_prop_name])
+				
+				tile_meta[gid] = tile_prop_dict
+
 			gid += 1
 			i += 1
 			x += int(tilesize.x) + spacing
@@ -241,6 +262,9 @@ func build():
 
 		if options.custom_properties and ts.has("properties") and ts.has("propertytypes"):
 			_set_meta(tileset, ts.properties, ts.propertytypes)
+
+		if tile_meta.size():
+			tileset.set_meta("tile_meta", tile_meta)
 
 		tileset.set_name(name)
 
