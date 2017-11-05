@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2016 George Marques
+# Copyright (c) 2017 George Marques
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -54,12 +54,13 @@ func get_data():
 		var tiled_raw_data = f.get_as_text()
 		f.close()
 
-		if data.parse_json(tiled_raw_data) != OK:
+		data = parse_json(tiled_raw_data)
+		if typeof(data) != TYPE_DICTIONARY:
 			return "Couldn't parse the source file"
 	else:
 		data = _tmx_to_dict(source)
 
-	return data;
+	return data
 
 func build():
 	# Validate before doing anything
@@ -95,15 +96,14 @@ func build():
 		if tstemp.has("source"):
 			var err = OK
 			var tileset_src = source.get_base_dir().plus_file(tstemp.source) if tstemp.source.is_rel_path() else tstemp.source
-			if tileset_src.extension() == "json":
+			if tileset_src.get_extension() == "json":
 				var f = File.new()
 				err = f.open(tileset_src, File.READ)
 				if err != OK:
 					return "Couldn't open tileset file %s." % [tileset_src]
 
-				ts = {}
-				err = ts.parse_json(f.get_as_text())
-				if err != OK:
+				ts = parse_json(f.get_as_text())
+				if typeof(ts) != TYPE_DICTIONARY:
 					return "Couldn't parse tileset file %s." % [tileset_src]
 			else:
 				var tsparser = XMLParser.new()
@@ -301,9 +301,8 @@ func build():
 	scene = Node2D.new()
 	scene.set_name(basename)
 
-	for l in data.layers:
-		if l.has("compression"):
-			return 'Tiled compressed format is not supported. Change your Map properties to a format without compression.'
+	for layer in data.layers:
+		var l = layer
 
 		if not l.has("type"):
 			return 'Invalid Tiled data: missing "type" key on layer.'
@@ -329,7 +328,14 @@ func build():
 			if "encoding" in l:
 				if l.encoding != "base64":
 					return 'Unsupported layer data encoding. Use Base64 or no enconding.'
-				layer_data = _parse_base64_layer(l.data)
+				else:
+					if l.has("compression"):
+						var layer_size = int(l.width) * int(l.height) * 4
+						layer_data = _parse_encoded_layer(l.data, l.compression, layer_size)
+					else:
+						layer_data = _parse_encoded_layer(l.data)
+					if typeof(layer_data) == TYPE_STRING:
+						return layer_data
 
 			var tilemap = TileMap.new()
 			var ts_modulate = tilemap.get_modulate()
@@ -780,10 +786,20 @@ class PointSorter:
 
 		return d1 < d2
 
-func _parse_base64_layer(data):
+func _parse_encoded_layer(data, compression = "", buffer_size = 0):
 	var decoded = Marshalls.base64_to_raw(data)
 
 	var result = []
+
+	if compression != "":
+		var compression_mode
+		match compression:
+			"zlib": compression_mode = File.COMPRESSION_DEFLATE
+			_: return "Unsupported compression type: " + compression
+
+		decoded = decoded.decompress(buffer_size, compression_mode)
+		if decoded.size() == 0:
+			return "Error decompressing the data"
 
 	for i in range(0, decoded.size(), 4):
 
@@ -877,9 +893,8 @@ func _tmx_to_dict(path):
 						if err != OK:
 							return "Couldn't open tileset file %s." % [tileset_src]
 
-						var ts = {}
-						err = ts.parse_json(f.get_as_text())
-						if err != OK:
+						var ts = parse_json(f.get_as_text())
+						if typeof(ts) != TYPE_DICTIONARY:
 							return "Couldn't parse tileset file %s." % [tileset_src]
 
 						ts.firstgid = int(tileset_data.firstgid)

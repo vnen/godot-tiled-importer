@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2016 George Marques
+# Copyright (c) 2017 George Marques
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,12 @@ extends EditorPlugin
 var import_plugin = null
 
 func get_name():
-	return "Tiled Map Importer"
+	return "Tiled Map"
 
 func _start():
 	if import_plugin == null:
 		import_plugin = preload("tiled_importer_plugin.gd").new()
+		import_plugin.config(self)
 		add_import_plugin(import_plugin)
 
 func _stop():
@@ -38,10 +39,17 @@ func _stop():
 		remove_import_plugin(import_plugin)
 		import_plugin = null
 
-
-
 func _enter_tree():
+	get_resource_filesystem().connect("filesystem_changed", self, "update_resources")
 	_start()
 
 func _exit_tree():
 	_stop()
+
+
+func reload_scene(path):
+	reload_scene_from_path(path)
+
+func update_resources():
+	get_resource_filesystem().disconnect("filesystem_changed", self, "update_resources")
+	get_resource_filesystem().scan()

@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2016 George Marques
+# Copyright (c) 2017 George Marques
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,13 +25,17 @@ extends EditorImportPlugin
 
 const TiledMap = preload("tiled_map.gd")
 const PLUGIN_NAME = "org.vnen.tiled_importer"
-var dialog = null
+
+var base_plugin = null
+
+func config(base):
+	base_plugin = base
 
 func get_importer_name():
 	return PLUGIN_NAME
 
 func get_visible_name():
-	return "Tiled Editor TileMap"
+	return "Tiled Map to Scene"
 
 func get_recognized_extensions():
 	return ["tmx", "json"]
@@ -154,11 +158,12 @@ func import(src, path, import_options, r_platform_variants, r_gen_files):
 		print("Error packing scene")
 		return FAILED
 
-	#packed_scene.set_import_metadata(metadata)
-
 	err = ResourceSaver.save("res://.import/prototype_tilemap.tmx-1fbab38439605f9c3c861b178197d792.scn", packed_scene)
 	if err != OK:
 		print("Error saving scene")
 		return FAILED
+
+	if base_plugin != null:
+		base_plugin.reload_scene(src)
 
 	return OK
