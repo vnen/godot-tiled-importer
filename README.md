@@ -3,7 +3,7 @@
 This is a plugin for [Godot Engine](https://godotengine.org) to import
 `TileMap`s and `TileSet`s from the [Tiled Map Editor](http://www.mapeditor.org).
 
-![](https://lut.im/uWPHymdSvs/l60C9UiVlrqK3bea.png)
+![](https://i.imgur.com/iRgqhlK.png)
 
 ## Installation
 
@@ -12,7 +12,7 @@ Simply download it from Godot Asset Library: https://godotengine.org/asset-libra
 Alternatively, download or clone this repository and copy the contents of the
 `addons` folder to your own project's `addons` folder.
 
-Then enable the plugin on the Project Settings.
+Then enable the plugin in the Project Settings' Plugins tab.
 
 ## Features
 
@@ -22,28 +22,26 @@ Then enable the plugin on the Project Settings.
 * Orthogonal and isometric maps.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
-* Custom import options, such as whether to embed the resources into the scene.
-* Support for image layers
+* Custom import options, such as whether to embed the TileSet resource into the scene.
+* Support for image layers.
 * Support for object layers, which are imported as StaticBody2D or LightOccluder2D
   for shapes (depending on the `type` property) and as Sprite for tiles.
 * Custom properties for maps, layers, tilesets, and objects are imported as
   metadata.
-* Support for post-import script.
+* Custom properties for tiles are imported as a dictionary into the tileset's `tile_meta` metadata.
+* Support for post-import scripts.
 
 ## Usage
 
-1. In Godot, click on menu Import -> TileMap from Tiled Editor.
-2. Set the source Tiled file (either a `.json` or a `.tmx`).
-3. Set the target destination scene.
-4. Ajusted the desired options.
-5. Press ok.
+While the plugin is active, all .tmx files in the project directory will be automatically converted.
+To change a TileMap's import settings, select it in the FileSystem dock and check out the Import dock.
 
-If no error occurs, the generated scene will be stored where you set it. The
-TileSets will be on a relative folder or embedded, depending on the options.
+The TileSets will either be embedded into the resulting Scene or saved inside the specified directory.
+Source images are not moved, references are kept where they were.
 
 ## Caveats on Tiled maps
 
-* Godot TileSets only have on collision shape, so the last found will overwrite
+* Godot TileSet tiles only have one collision shape, so the last collision object found will overwrite
   the others.
 
 * The same goes for navigation/occluder polygons.
@@ -69,13 +67,15 @@ TileSets will be on a relative folder or embedded, depending on the options.
 
 ## Options
 
-### Post-import script
+### Post Scripts
 
-The selected script will have it's `post_import(scene)` method run. This
-enables you to change the generated scene automatically upon each reimport.
+All script files specified in the Array will have their `post_import(scene)`
+method runs. This enables you to change the generated scene automatically
+upon each reimport.
 
-The `post_import` method will receive the built scene and **must** return the
-changed scene.
+The `post_import` methods on each script file will receive the built scene
+as an argument and **must** return the changed scene. The scripts are ran
+in the order they are in the Array.
 
 ### Single TileSet
 
@@ -83,28 +83,34 @@ Save all Tiled tilesets a single Godot resource. If any of your layers uses
 more than one tileset image, this is required otherwise it won't be generated
 properly.
 
-### Embed resources
-
-Save all TileSets and images embedded in the target scene. Otherwise they will
-be saved individually in the selected relative folder.
-
-### Relative resource path
-
-The relative path from the target scene where to save the resources
-(images and tilesets).
-
-### Image flags
-
-The image flags to apply to all imported TileSet images.
-
-### Create separate image directories
-
-When the TileSet is a collection of images, this option tells tp create a new
-directory with the TileSet name to hold all of the images.
-
 ### Custom properties
 
 Whether or not to save the custom properties as metadata in the nodes and resources.
+
+### Bundle Tilesets
+
+Whether all tilesets used in Tiled should be bundled up into a single TileSet
+resource.
+This is needed when a layer in the TileMap uses 2 or more Tiled TileSets at the same
+time, as Godot only supports one TileSet per TileMap layer.
+The advantage to not using this setting is that every Tiled TileSet will only be
+imported once and all imported Scenes using the same Tiled TileSet will reference
+the same files, however this only works if TileSets are saved using the
+`Save Tilesets` option.
+
+### Save Tilesets
+
+Whether or not to save the TileSet resources generated during Tiled map import to the
+project directory instead of embedding them directly into the generated Scene file.
+Useful to save space if TileSets are shared between different Tiled maps, but only
+if they are not bundled using `Bundle Tilesets`.
+
+### Tileset Directory
+
+The absolute path to the directory that TileSets are saved to when `Save Tilesets`
+is enabled. The default is inside the `.import` directory that the Tiled maps are
+stored inside of, but this can be set to any directory outside of `.import` as well.
+
 
 
 ## License

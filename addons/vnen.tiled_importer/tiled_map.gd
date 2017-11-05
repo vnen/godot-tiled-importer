@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2017 George Marques
+# Copyright (c) 2016 George Marques
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -54,8 +54,7 @@ func get_data():
 		var tiled_raw_data = f.get_as_text()
 		f.close()
 
-		data = parse_json(tiled_raw_data)
-		if typeof(data) != TYPE_DICTIONARY:
+		if data.parse_json(tiled_raw_data) != OK:
 			return "Couldn't parse the source file"
 	else:
 		data = _tmx_to_dict(source)
@@ -87,7 +86,7 @@ func build():
 
 	var single_tileset = null
 
-	if options.single_tileset:
+	if options.bundle_tilesets:
 		single_tileset = TileSet.new()
 
 	# Make tilesets
@@ -96,14 +95,15 @@ func build():
 		if tstemp.has("source"):
 			var err = OK
 			var tileset_src = source.get_base_dir().plus_file(tstemp.source) if tstemp.source.is_rel_path() else tstemp.source
-			if tileset_src.get_extension() == "json":
+			if tileset_src.extension() == "json":
 				var f = File.new()
 				err = f.open(tileset_src, File.READ)
 				if err != OK:
 					return "Couldn't open tileset file %s." % [tileset_src]
 
-				ts = parse_json(f.get_as_text())
-				if typeof(ts) != TYPE_DICTIONARY:
+				ts = {}
+				err = ts.parse_json(f.get_as_text())
+				if err != OK:
 					return "Couldn't parse tileset file %s." % [tileset_src]
 			else:
 				var tsparser = XMLParser.new()
@@ -121,10 +121,14 @@ func build():
 					return "Error parsing tileset file %s." % [tileset_src]
 
 				ts = _parse_tileset(tsparser)
+			ts.source_dir = tileset_src.get_base_dir()
 			ts.firstgid = int(tstemp.firstgid)
 
+		if not ts.has("source_dir"):
+			ts.source_dir = options.basedir
+
 		var tileset = null
-		if options.single_tileset:
+		if options.bundle_tilesets:
 			tileset = single_tileset
 		else:
 			tileset = TileSet.new()
@@ -164,20 +168,21 @@ func build():
 			return "Missing tile count (%s)" % [name]
 		if ts.has("image"):
 			has_global_img = true
-			image_path = options.basedir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
-			target_dir = options.target.get_base_dir().plus_file(options.rel_path)
-			image = _load_image(image_path, target_dir, name + ".png", image_w, image_h)
+			image_path = ts.source_dir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
+			image = load(image_path)
 			if typeof(image) == TYPE_STRING:
 				return image
 		else:
 			if options.separate_img_dir:
-				target_dir = options.target.get_base_dir().plus_file(options.rel_path).plus_file(name)
+				target_dir = options.target.get_base_dir().plus_file(options.tileset_directory).plus_file(name)
 				if not Directory.new().dir_exists(target_dir):
 					Directory.new().make_dir_recursive(target_dir)
 			else:
-				target_dir = options.target.get_base_dir().plus_file(options.rel_path)
+				target_dir = options.target.get_base_dir().plus_file(options.tileset_directory)
 
 		var gid = firstgid
+		
+		var tile_meta = {}
 
 		var x = margin
 		var y = margin
@@ -188,22 +193,21 @@ func build():
 			var tilepos = Vector2(x,y)
 			var region = Rect2(tilepos, tilesize)
 
+			var rel_id = str(gid - firstgid)
+
 			tileset.create_tile(gid)
 			if has_global_img:
 				tileset.tile_set_texture(gid, image)
 				tileset.tile_set_region(gid, region)
-
-			var rel_id = str(gid - firstgid)
-
-			if not rel_id in ts.tiles:
+			elif not rel_id in ts.tiles:
 				gid += 1
 				continue
 
 			if not has_global_img and "image" in ts.tiles[rel_id]:
 				var _img = ts.tiles[rel_id].image
-				image_path = options.basedir.plus_file(_img) if _img.is_rel_path() else _img
-				_img = _img.get_file().get_basename()
-				image = _load_image(image_path, target_dir, "%s_%s_%s.png" % [name, _img, rel_id], cell_size.x, cell_size.y)
+				image_path = ts.source_dir.plus_file(_img) if _img.is_rel_path() else _img
+				_img = _img.get_file().basename()
+				image = load(image_path)
 				if typeof(image) == TYPE_STRING:
 					return image
 				tileset.tile_set_texture(gid, image)
@@ -226,8 +230,28 @@ func build():
 						tileset.tile_set_light_occluder(gid, shape)
 						tileset.tile_set_occluder_offset(gid, offset)
 					else:
-						tileset.tile_set_shape(gid, shape)
-						tileset.tile_set_shape_offset(gid, offset)
+						var shape_id = tileset.tile_get_shape_count(gid)
+						tileset.tile_set_shape(gid, shape_id, shape)
+						tileset.tile_set_shape_transform(gid, shape_id, Transform2D(0, offset))
+
+			if options.custom_properties and "tiles" in ts and rel_id in ts.tiles and "properties" in ts.tiles[rel_id] and "propertytypes" in ts.tiles[rel_id]:
+				# If the tile has properties, create a dict with them and then save that new dict to the tile_meta dict using its gid
+				var tile_props = ts.tiles[rel_id].properties
+				var tile_prop_types = ts.tiles[rel_id].propertytypes
+				var tile_prop_dict = {}
+				for tile_prop_name in tile_props:
+					if tile_prop_types[tile_prop_name].to_lower() == "bool":
+						tile_prop_dict[tile_prop_name] = bool(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "color":
+						tile_prop_dict[tile_prop_name] = Color(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "float":
+						tile_prop_dict[tile_prop_name] = float(tile_props[tile_prop_name])
+					elif tile_prop_types[tile_prop_name].to_lower() == "int":
+						tile_prop_dict[tile_prop_name] = int(tile_props[tile_prop_name])
+					else:
+						tile_prop_dict[tile_prop_name] = str(tile_props[tile_prop_name])
+				
+				tile_meta[gid] = tile_prop_dict
 
 			gid += 1
 			i += 1
@@ -236,14 +260,17 @@ func build():
 				x = margin
 				y += int(tilesize.y) + spacing
 
-		if options.custom_properties and ts.has("properties") and ts.has("propertytypes"):
-			_set_meta(tileset, ts.properties, ts.propertytypes)
+		if options.custom_properties:
+			if ts.has("properties") and ts.has("propertytypes"):
+				_set_meta(tileset, ts.properties, ts.propertytypes)
+			if tile_meta.size():
+				tileset.set_meta("tile_meta", tile_meta)
 
 		tileset.set_name(name)
 
-		if not options.single_tileset:
-			if not options.embed:
-				var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + name + ".res")
+		if not options.bundle_tilesets:
+			if options.save_tilesets:
+				var tileset_path = options.tileset_directory + name + ".res"
 				var err = ResourceSaver.save(tileset_path, tileset, ResourceSaver.FLAG_CHANGE_PATH)
 				if err != OK:
 					return "Couldn't save TileSet %s" % [name]
@@ -257,25 +284,26 @@ func build():
 				"tileset": tileset,
 			}
 
-	if options.single_tileset and not options.embed:
+	if options.bundle_tilesets and options.save_tilesets:
 		single_tileset.set_name(basename)
 
-		var tileset_path = options.target.get_base_dir().plus_file(options.rel_path + basename + ".res")
+		var tileset_path = options.target.get_base_dir().plus_file(options.tileset_directory + basename + ".res")
 		var err = ResourceSaver.save(tileset_path, single_tileset, ResourceSaver.FLAG_CHANGE_PATH)
 		if err != OK:
 			return "Couldn't save TileSet"
 		single_tileset.take_over_path(tileset_path)
 
-	if options.single_tileset:
+	if options.bundle_tilesets:
 		tilesets = [single_tileset]
 
 	# TileSets done, creating the target scene
 
 	scene = Node2D.new()
-	scene.set_name(basename.substr(0,4));
+	scene.set_name(basename)
 
-	for layer in data.layers:
-		var l = layer
+	for l in data.layers:
+		if l.has("compression"):
+			return 'Tiled compressed format is not supported. Change your Map properties to a format without compression.'
 
 		if not l.has("type"):
 			return 'Invalid Tiled data: missing "type" key on layer.'
@@ -301,27 +329,23 @@ func build():
 			if "encoding" in l:
 				if l.encoding != "base64":
 					return 'Unsupported layer data encoding. Use Base64 or no enconding.'
-				else:
-					if l.has("compression"):
-						var layer_size = int(l.width) * int(l.height) * 4
-						layer_data = _parse_encoded_layer(l.data, l.compression, layer_size)
-					else:
-						layer_data = _parse_encoded_layer(l.data)
-					if typeof(layer_data) == TYPE_STRING:
-						return layer_data
+				layer_data = _parse_base64_layer(l.data)
 
 			var tilemap = TileMap.new()
+			var ts_modulate = tilemap.get_modulate()
+			ts_modulate.a = opacity
+
 			tilemap.set_name(name)
-			tilemap.cell_size = cell_size
-			tilemap.modulate = Color(1, 1, 1, opacity)
-			tilemap.visible = visible
-			tilemap.mode = map_mode
+			tilemap.set_cell_size(cell_size)
+			tilemap.set_modulate(ts_modulate)
+			tilemap.set_visible(visible)
+			tilemap.set_mode(map_mode)
 
 			var offset = Vector2()
 			if l.has("offsetx") and l.has("offsety"):
 				offset = Vector2(int(l.offsetx), int(l.offsety))
 
-			tilemap.position = offset
+			tilemap.set_position(offset)
 
 			var firstgid = 0
 			tilemap.set_tileset(_tileset_from_gid(firstgid))
@@ -376,17 +400,19 @@ func build():
 				offset.y = float(l.offsety)
 
 			var image_path = options.basedir.plus_file(l.image) if l.image.is_rel_path() else l.image
-			var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
-			var image = _load_image(image_path, target_dir, l.name + ".png")
+			var image = load(image_path)
 
 			if typeof(image) == TYPE_STRING:
 				return image
 
-			sprite.texture = image
-			sprite.modulate = Color(1, 1, 1, opacity)
-			sprite.visible = visible
+			var spr_modulate = sprite.get_modulate()
+			spr_modulate.a = opacity
+
+			sprite.set_texture(image)
+			sprite.set_modulate(spr_modulate)
+			sprite.set_visible(visible)
 			scene.add_child(sprite)
-			sprite.position = pos + offset
+			sprite.set_position(pos + offset)
 			sprite.set_owner(scene)
 
 		elif l.type == "objectgroup":
@@ -401,9 +427,12 @@ func build():
 			if options.custom_properties and l.has("properties") and l.has("propertytypes"):
 				_set_meta(object, l.properties, l.propertytypes)
 
+			var obj_modulate = object.get_modulate()
+			obj_modulate.a = opacity
+			
 			object.set_name(l.name)
-			object.set_opacity(opacity)
-			object.set_hidden(not visible)
+			object.set_modulate(obj_modulate)
+			object.set_visible(visible)
 			scene.add_child(object)
 			object.set_owner(scene)
 
@@ -428,17 +457,17 @@ func build():
 							pos.x = float(obj.x)
 						if obj.has("y"):
 							pos.y = float(obj.y)
-						occluder.set_pos(pos)
+						occluder.set_position(pos)
 
 						var rot = 0
 						if obj.has("rotation"):
 							rot = float(obj.rotation)
-						occluder.set_rotd(-rot)
+						occluder.set_rotation_in_degrees(-rot)
 
 						var obj_visible = true
 						if obj.has("visible"):
 							obj_visible = bool(obj.visible)
-						occluder.set_hidden(not obj_visible)
+						occluder.set_visible(obj_visible)
 
 						occluder.set_occluder_polygon(shape)
 
@@ -467,7 +496,7 @@ func build():
 								offset = Vector2(shape.get_radius(), shape.get_radius())
 							elif shape is CapsuleShape2D:
 								offset = Vector2(shape.get_radius(), shape.get_height())
-							collision.set_pos(-offset)
+							collision.set_position(-offset)
 							rot_offset = 180
 						else:
 							collision = CollisionPolygon2D.new()
@@ -488,7 +517,7 @@ func build():
 						var obj_visible = true
 						if obj.has("visible"):
 							obj_visible = bool(obj.visible)
-						body.set_hidden(not obj_visible)
+						body.set_visible(not obj_visible)
 
 						var rot = 0
 						if obj.has("rotation"):
@@ -497,9 +526,11 @@ func build():
 								rot = rot_offset - rot
 							else:
 								rot = -rot
-						body.set_rotd(rot)
+						body.set_rotation_in_degrees(rot)
 
-						body.add_shape(shape, Matrix32(0, -offset))
+						var shape_owner = body.create_shape_owner(body)
+						body.shape_owner_add_shape(shape_owner, shape)
+						body.shape_owner_set_transform(shape_owner, Transform2D(0, -offset))
 
 						body.add_child(collision)
 						object.add_child(body)
@@ -512,7 +543,7 @@ func build():
 						if obj.has("y"):
 							pos.y = float(obj.y)
 
-						body.set_pos(pos)
+						body.set_position(pos)
 
 						if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
 							_set_meta(body, obj.properties, obj.propertytypes)
@@ -524,10 +555,13 @@ func build():
 					if tileset == null:
 						return "Invalid GID in object layer tile"
 
+					var is_tile_object = tileset.tile_get_region(tileid) != Rect2(0, 0, 0, 0)
 					var sprite = Sprite.new()
 					sprite.set_texture(tileset.tile_get_texture(tileid))
-					sprite.set_region(true)
-					sprite.set_region_rect(tileset.tile_get_region(tileid))
+
+					if is_tile_object:
+						sprite.set_region(true)
+						sprite.set_region_rect(tileset.tile_get_region(tileid))
 
 					if obj.has("name") and not obj.name.empty():
 						sprite.set_name(obj.name);
@@ -544,23 +578,34 @@ func build():
 						pos.x = float(obj.x)
 					if obj.has("y"):
 						pos.y = float(obj.y)
-					sprite.set_pos(pos)
+					if is_tile_object:
+						# Tile object positions are oriented bottom left.
+						# If we import their positioning data as is, their position ends up skewed incorrectly.
+						pos.x = pos.x + float(obj.width) / 2
+						pos.y = pos.y - float(obj.height) / 2
+					sprite.set_position(pos)
 
 					var rot = 0
 					if obj.has("rotation"):
 						rot = float(obj.rotation)
-					sprite.set_rotd(-rot)
+					sprite.set_rotation_in_degrees(-rot)
 
 					var obj_visible = true
 					if obj.has("visible"):
 						obj_visible = bool(obj.visible)
-					sprite.set_hidden(not obj_visible)
+					sprite.set_visible(obj_visible)
 
 					object.add_child(sprite)
 					sprite.set_owner(scene)
 
-					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
-						_set_meta(sprite, obj.properties, obj.propertytypes)
+					if options.custom_properties:
+						var tile = _tile_from_gid(tile_raw_id)
+
+						if tile != null and tile.has("properties") and tile.has("propertytypes"):
+							_set_meta(sprite, tile.properties, tile.propertytypes)
+
+						if obj.has("properties") and obj.has("propertytypes"):
+							_set_meta(sprite, obj.properties, obj.propertytypes)
 
 	if options.custom_properties and data.has("properties") and data.has("propertytypes"):
 		_set_meta(scene, data.properties, data.propertytypes)
@@ -575,7 +620,7 @@ func get_scene():
 
 # Get the tileset based on the global tile id
 func _tileset_from_gid(gid):
-	if options.single_tileset:
+	if options.bundle_tilesets:
 		return tilesets[0]
 
 	for map_id in tile_id_mapping:
@@ -585,12 +630,21 @@ func _tileset_from_gid(gid):
 
 	return null
 
+# Get a tile based on the global tile id
+func _tile_from_gid(gid):
+	for tileset in data.tilesets:
+		if gid >= tileset.firstgid and gid < (tileset.firstgid + tileset.tilecount):
+			var rel_id = str(gid - tileset.firstgid)
+			return tileset.tiles[rel_id]
+
+	return null
+
 # Get a shape based on the object data
 func _shape_from_object(obj):
 	var shape = "No shape created. That really shouldn't happen..."
 
 	if "polygon" in obj or "polyline" in obj:
-		var vertices = Vector2Array()
+		var vertices = PoolVector2Array()
 
 		if "polygon" in obj:
 			for point in obj.polygon:
@@ -697,7 +751,7 @@ func _sort_points_cw(vertices):
 	var sorter = PointSorter.new(centroid)
 	vertices.sort_custom(sorter, "is_less")
 
-	return Vector2Array(vertices)
+	return PoolVector2Array(vertices)
 
 class PointSorter:
 	var center
@@ -726,19 +780,10 @@ class PointSorter:
 
 		return d1 < d2
 
-func _parse_encoded_layer(data, compression = "", buffer_size = 0):
+func _parse_base64_layer(data):
 	var decoded = Marshalls.base64_to_raw(data)
+
 	var result = []
-
-	if compression != "":
-		var compression_mode
-		match compression:
-			"zlib": compression_mode = File.COMPRESSION_DEFLATE
-			_: return "Unsupported compression type: " + compression
-
-		decoded = decoded.decompress(buffer_size, compression_mode)
-		if decoded.size() == 0:
-			return "Error decompressing the data"
 
 	for i in range(0, decoded.size(), 4):
 
@@ -751,22 +796,22 @@ func _parse_encoded_layer(data, compression = "", buffer_size = 0):
 	return result
 
 # Load, copy and verify image
-func _load_image(source_img, target_folder, filename, width = false, height = false):
-	var dir = Directory.new()
-	if not dir.file_exists(source_img):
-		return 'Referenced image "%s" not found' % [source_img]
-	var image = ImageTexture.new()
-	image.load(source_img)
-	image.set_flags(options.image_flags)
-
-	if not options.embed:
-		var target_image = target_folder.plus_file(filename)
-		var err = ResourceSaver.save(target_image, image)
-		if err != OK:
-			return "Couldn't save tileset image %s" % [target_image]
-		image.take_over_path(target_image)
-
-	return image
+#func _load_image(source_img, target_folder, filename, width = false, height = false):
+#	var dir = Directory.new()
+#	if not dir.file_exists(source_img):
+#		return 'Referenced image "%s" not found' % [source_img]
+#	var image = ImageTexture.new()
+#	image.load(source_img)
+#
+#	if options.save_tilesets:
+#		var target_image = target_folder.plus_file(filename)
+#
+#		var err = ResourceSaver.save(target_image, image)
+#		if err != OK:
+#			return "Couldn't save tileset image %s" % [target_image]
+#		image.take_over_path(target_image)
+#
+#	return image
 
 # Parse the custom properties and set as meta of the objet
 func _set_meta(obj, properties, types):
@@ -832,11 +877,13 @@ func _tmx_to_dict(path):
 						if err != OK:
 							return "Couldn't open tileset file %s." % [tileset_src]
 
-						var ts = parse_json(f.get_as_text())
-						if typeof(ts) != TYPE_DICTIONARY:
+						var ts = {}
+						err = ts.parse_json(f.get_as_text())
+						if err != OK:
 							return "Couldn't parse tileset file %s." % [tileset_src]
 
 						ts.firstgid = int(tileset_data.firstgid)
+						ts.source_dir = tileset_src.get_base_dir()
 						data.tilesets.push_back(ts)
 
 					else:
@@ -856,6 +903,7 @@ func _tmx_to_dict(path):
 
 						var ts = _parse_tileset(tsparser)
 						ts.firstgid = int(tileset_data.firstgid)
+						ts.source_dir = tileset_src.get_base_dir()
 						data.tilesets.push_back(ts)
 
 			elif parser.get_node_name() == "layer":
@@ -962,6 +1010,10 @@ func _parse_tile_data(parser):
 					obj_group.objects = []
 				var obj = _parse_object(parser)
 				obj_group.objects.push_back(obj)
+			elif parser.get_node_name() == "properties":
+				var prop_data = _parse_properties(parser)
+				data["properties"] = prop_data.properties
+				data["propertytypes"] = prop_data.propertytypes
 
 		err = parser.read()
 
@@ -981,7 +1033,11 @@ func _parse_object(parser):
 					break
 
 			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
-				if parser.get_node_name() == "ellipse":
+				if parser.get_node_name() == "properties":
+					var prop_data = _parse_properties(parser)
+					data["properties"] = prop_data.properties
+					data["propertytypes"] = prop_data.propertytypes
+				elif parser.get_node_name() == "ellipse":
 					data.ellipse = true
 				elif parser.get_node_name() == "polygon" or parser.get_node_name() == "polyline":
 					var points = []
