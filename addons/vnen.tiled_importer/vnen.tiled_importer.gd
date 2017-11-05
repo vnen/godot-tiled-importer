@@ -40,16 +40,10 @@ func _stop():
 		import_plugin = null
 
 func _enter_tree():
-	get_resource_filesystem().connect("filesystem_changed", self, "update_resources")
 	_start()
 
 func _exit_tree():
 	_stop()
 
-
 func reload_scene(path):
 	reload_scene_from_path(path)
-
-func update_resources():
-	get_resource_filesystem().disconnect("filesystem_changed", self, "update_resources")
-	get_resource_filesystem().scan()

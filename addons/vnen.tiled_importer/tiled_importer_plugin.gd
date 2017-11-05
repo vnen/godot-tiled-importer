@@ -25,7 +25,6 @@ extends EditorImportPlugin
 
 const TiledMap = preload("tiled_map.gd")
 const PLUGIN_NAME = "org.vnen.tiled_importer"
-
 var base_plugin = null
 
 func config(base):
@@ -53,7 +52,6 @@ func get_preset_count():
 	return 1
 
 func get_preset_name(preset):
-	# There is only one preset, so we will only return that one ever
 	return "Default"
 
 func get_import_options(preset):
@@ -61,47 +59,43 @@ func get_import_options(preset):
 		{
 			name = "post_scripts",
 			default_value = [],
-			#hint_string = "Post-Import Scripts",
-			#usage = "The importer will call post_import(scene) on each script file in the array. post_import() has to return the changed scene. (optional)",
+			#tooltip = "The importer will call post_import(scene) on each script file in the array. post_import() has to return the changed scene. (optional)",
 		},
 		{
 			name = "custom_properties",
 			default_value = true,
-			#hint_string = "Custom properties",
-			#usage = "Whether to import custom properties as meta data. Custom properties set as a dictionary in the tileset's meta data as 'tile_meta', indexed by the unique tile IDs.",
+			#tooltip = "Whether to import custom properties as meta data. Custom properties set as a dictionary in the tileset's meta data as 'tile_meta', indexed by the unique tile IDs.",
 		},
 		{
 			name = "bundle_tilesets",
 			default_value = false,
-			#hint_string = "Bundle TileSets into one",
-			#usage = "Mix all Tiled TileSets into a single Godot resource named after the map. Needed if your layers uses more than one tileset each. If false, each tileset will be saved individually using its Tiled name.",
+			#tooltip = "Mix all Tiled TileSets into a single Godot resource named after the map. Needed if your layers uses more than one tileset each. If false, each tileset will be saved individually using its Tiled name.",
 		},
 		{
 			name = "save_tilesets",
 			default_value = true,
-			#hint_string = "Save TileSets inside res://",
-			#usage = "Save the generated TileSet .res files directly inside the project folder instead of only embedding them inside the generated scene.",
+			#tooltip = "Save the generated TileSet .res files directly inside the project folder instead of only embedding them inside the generated scene.",
 		},
 		{
 			name = "tileset_directory",
 			default_value = "res://.import/tilesets/",
-			#hint_string = "Tileset Directory",
-			#usage = "The absolute directory inside the project where all TileSet resources generated during TileMap import are saved. Only used if 'Save Tilesets' is true.",
+			#tooltip = "The absolute directory inside the project where all TileSet resources generated during TileMap import are saved. Only used if 'Save Tilesets' is true.",
 		},
 	]
 	
 	return options
 
 
-func import(src, path, import_options, r_platform_variants, r_gen_files):
+func import(src, target_path, import_options, r_platform_variants, r_gen_files):
+	
+	target_path = target_path + "." + get_save_extension()
 	var tiled_map = TiledMap.new()
 
 	var options = {}
 	for key in import_options:
 		options[key] = import_options[key]
 
-	options["target"] = path
-	print(options.tileset_directory)
+	options["target"] = target_path
 	if options.tileset_directory != "":
 		if options.tileset_directory.is_abs_path():
 			if options.tileset_directory[-1] != "/":
@@ -109,14 +103,12 @@ func import(src, path, import_options, r_platform_variants, r_gen_files):
 		else:
 			print("Cannot find tileset directory, tilesets will not be saved.")
 			options.save_tilesets = false
-	print(options.tileset_directory)
 
 	tiled_map.init(src, options)
 
 	var tiled_data = tiled_map.get_data()
 
 	if typeof(tiled_data) == TYPE_STRING:
-		# If it's a string then it's an error message
 		print(tiled_data)
 		return FAILED
 
@@ -158,7 +150,8 @@ func import(src, path, import_options, r_platform_variants, r_gen_files):
 		print("Error packing scene")
 		return FAILED
 
-	err = ResourceSaver.save("res://.import/prototype_tilemap.tmx-1fbab38439605f9c3c861b178197d792.scn", packed_scene)
+	err = ResourceSaver.save(target_path, packed_scene)
+	print(target_path)
 	if err != OK:
 		print("Error saving scene")
 		return FAILED

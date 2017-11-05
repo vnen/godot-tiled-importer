@@ -137,7 +137,6 @@ func build():
 		var margin = 0
 		var firstgid = 0
 		var image = ImageTexture.new()
-		var target_dir = ""
 		var image_path = ""
 		var image_h = 0
 		var image_w = 0
@@ -172,13 +171,6 @@ func build():
 			image = load(image_path)
 			if typeof(image) == TYPE_STRING:
 				return image
-		else:
-			if options.separate_img_dir:
-				target_dir = options.target.get_base_dir().plus_file(options.tileset_directory).plus_file(name)
-				if not Directory.new().dir_exists(target_dir):
-					Directory.new().make_dir_recursive(target_dir)
-			else:
-				target_dir = options.target.get_base_dir().plus_file(options.tileset_directory)
 
 		var gid = firstgid
 		
@@ -287,7 +279,7 @@ func build():
 	if options.bundle_tilesets and options.save_tilesets:
 		single_tileset.set_name(basename)
 
-		var tileset_path = options.target.get_base_dir().plus_file(options.tileset_directory + basename + ".res")
+		var tileset_path = options.tileset_directory + basename + ".res"
 		var err = ResourceSaver.save(tileset_path, single_tileset, ResourceSaver.FLAG_CHANGE_PATH)
 		if err != OK:
 			return "Couldn't save TileSet"
