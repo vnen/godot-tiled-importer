@@ -25,10 +25,6 @@ extends EditorImportPlugin
 
 const TiledMap = preload("tiled_map.gd")
 const PLUGIN_NAME = "org.vnen.tiled_importer"
-var base_plugin = null
-
-func config(base):
-	base_plugin = base
 
 func get_importer_name():
 	return PLUGIN_NAME
@@ -79,6 +75,7 @@ func get_import_options(preset):
 		{
 			name = "tileset_directory",
 			default_value = "res://.import/tilesets/",
+			property_hint = PROPERTY_HINT_DIR,
 			#tooltip = "The absolute directory inside the project where all TileSet resources generated during TileMap import are saved. Only used if 'Save Tilesets' is true.",
 		},
 	]
@@ -155,8 +152,5 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 	if err != OK:
 		print("Error saving scene")
 		return FAILED
-
-	if base_plugin != null:
-		base_plugin.reload_scene(src)
 
 	return OK

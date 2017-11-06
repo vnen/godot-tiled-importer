@@ -31,7 +31,6 @@ func get_name():
 func _start():
 	if import_plugin == null:
 		import_plugin = preload("tiled_importer_plugin.gd").new()
-		import_plugin.config(self)
 		add_import_plugin(import_plugin)
 
 func _stop():
@@ -44,6 +43,3 @@ func _enter_tree():
 
 func _exit_tree():
 	_stop()
-
-func reload_scene(path):
-	reload_scene_from_path(path)
