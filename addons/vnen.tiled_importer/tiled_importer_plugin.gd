@@ -53,9 +53,10 @@ func get_preset_name(preset):
 func get_import_options(preset):
 	var options =  [
 		{
-			name = "post_scripts",
-			default_value = [],
-			#tooltip = "The importer will call post_import(scene) on each script file in the array. post_import() has to return the changed scene. (optional)",
+			name = "post_script",
+			default_value = "",
+			property_hint = PROPERTY_HINT_FILE,
+			#tooltip = "The importer will call post_import(scene) on the script at the given location. post_import() has to return the changed scene. (optional)",
 		},
 		{
 			name = "custom_properties",
@@ -119,10 +120,8 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 
 	var scene = tiled_map.get_scene()
 
-	for script_path in options["post_scripts"]:
-		if typeof(script_path) != TYPE_STRING:
-			continue
-		
+	var script_path = options["post_script"]
+	if typeof(script_path) == TYPE_STRING and script_path != "":
 		script_path = script_path.strip_edges()
 		
 		var script = load(script_path)
@@ -148,7 +147,6 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 		return FAILED
 
 	err = ResourceSaver.save(target_path, packed_scene)
-	print(target_path)
 	if err != OK:
 		print("Error saving scene")
 		return FAILED
