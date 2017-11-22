@@ -3,7 +3,7 @@
 This is a plugin for [Godot Engine](https://godotengine.org) to import
 `TileMap`s and `TileSet`s from the [Tiled Map Editor](http://www.mapeditor.org).
 
-![](https://i.imgur.com/iRgqhlK.png)
+![](https://i.imgur.com/BWcqnWi.png)
 
 ## Installation
 
@@ -69,13 +69,13 @@ Source images are not moved, references are kept where they were.
 
 ### Post Scripts
 
-All script files specified in the Array will have their `post_import(scene)`
-method runs. This enables you to change the generated scene automatically
-upon each reimport.
+The post-import GDScript file has its `post_import(scene)` method called.
+This enables you to change the generated scene automatically upon each reimport.
 
-The `post_import` methods on each script file will receive the built scene
-as an argument and **must** return the changed scene. The scripts are ran
-in the order they are in the Array.
+The `post_import` method receives the fully built scene as an argument and
+**must** return the changed scene.
+If you add any additional nodes to the scene, make sure to call `set_owner(scene)`
+on each of them so they are saved to the file system correctly.
 
 ### Single TileSet
 
