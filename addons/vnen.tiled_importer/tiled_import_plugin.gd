@@ -21,17 +21,35 @@
 # SOFTWARE.
 
 tool
-extends EditorPlugin
+extends EditorImportPlugin
 
-var import_plugin = null
+func get_importer_name():
+	return "vnen.tiled_importer"
 
-func get_name():
-	return "Tiled Map Importer"
+func get_visible_name():
+	return "Scene"
 
-func _enter_tree():
-	import_plugin = preload("tiled_import_plugin.gd").new()
-	add_import_plugin(import_plugin)
+func get_recognized_extensions():
+	return ["json", "tmx"]
 
-func _exit_tree():
-	remove_import_plugin(import_plugin)
-	import_plugin = null
+func get_save_extension():
+	return "scn"
+
+func get_resource_type():
+	return "PackedScene"
+
+func get_preset_count():
+	return 1
+
+func get_preset_name(preset):
+	match preset:
+		0: return "Default"
+
+func get_import_options(preset):
+	return []
+
+func import(source_file, save_path, options, r_platform_variants, r_gen_files):
+	return ERR_CANT_CREATE
+
+func get_option_visibility(option, options):
+	return true
