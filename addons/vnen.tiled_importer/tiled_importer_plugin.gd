@@ -23,90 +23,132 @@
 tool
 extends EditorImportPlugin
 
-const TiledMap = preload("res://addons/vnen.tiled_importer/tiled_map.gd")
+const TiledMap = preload("tiled_map.gd")
 const PLUGIN_NAME = "org.vnen.tiled_importer"
-
-var base_plugin = null
-
-func config(b):
-	base_plugin = b
-
-func get_preset_count():
-	return 0
-
-func get_preset_name(preset):
-	return "Default"
-
-func get_recognized_extensions():
-	return ['tmx', 'json']
-
-func get_save_extension():
-	return 'scn'
-
-func get_import_options(preset):
-	return [
-		{
-			"name": "textures/image_flags",
-			"default_value": 0,
-			"property_hint": PROPERTY_HINT_FLAGS,
-			"hint_string": "Mipmaps,Repeat,Filter,Anisotropic Filter,Convert to Linear,Mirrored Repeat"
-		}
-	]
-
-func get_visible_name():
-	return "Tiled Map as Scene"
-
-func get_resource_type():
-	return "PackedScene"
 
 func get_importer_name():
 	return PLUGIN_NAME
 
-func import(source_file, save_path, options, r_platform_variants, r_gen_files):
+func get_visible_name():
+	return "Tiled Map to Scene"
 
-	print("import_options ", options)
+func get_recognized_extensions():
+	return ["tmx", "json"]
+
+func get_save_extension():
+	return "scn"
+
+func get_resource_type():
+	return "PackedScene"
+
+func get_option_visibility(option, options):
+	return true
+
+func get_preset_count():
+	return 1
+
+func get_preset_name(preset):
+	return "Default"
+
+func get_import_options(preset):
+	var options =  [
+		{
+			name = "post_script",
+			default_value = "",
+			property_hint = PROPERTY_HINT_FILE,
+			#tooltip = "The importer will call post_import(scene) on the script at the given location. post_import() has to return the changed scene. (optional)",
+		},
+		{
+			name = "custom_properties",
+			default_value = true,
+			#tooltip = "Whether to import custom properties as meta data. Custom properties set as a dictionary in the tileset's meta data as 'tile_meta', indexed by the unique tile IDs.",
+		},
+		{
+			name = "bundle_tilesets",
+			default_value = false,
+			#tooltip = "Mix all Tiled TileSets into a single Godot resource named after the map. Needed if your layers uses more than one tileset each. If false, each tileset will be saved individually using its Tiled name.",
+		},
+		{
+			name = "save_tilesets",
+			default_value = true,
+			#tooltip = "Save the generated TileSet .res files directly inside the project folder instead of only embedding them inside the generated scene.",
+		},
+		{
+			name = "tileset_directory",
+			default_value = "res://.import/tilesets/",
+			property_hint = PROPERTY_HINT_DIR,
+			#tooltip = "The absolute directory inside the project where all TileSet resources generated during TileMap import are saved. Only used if 'Save Tilesets' is true.",
+		},
+	]
+	
+	return options
+
+
+func import(src, target_path, import_options, r_platform_variants, r_gen_files):
+	
+	target_path = target_path + "." + get_save_extension()
 	var tiled_map = TiledMap.new()
-	var full_path = save_path + "." + get_save_extension()
-	var my_options = {
-		"single_tileset": true,
-		"embed": true,
-		"rel_path": "",
-		"image_flags": options["textures/image_flags"],
-		"separate_img_dir": false,
-		"custom_properties": true,
-		"post_script": "",
-		"target": full_path,
-	}
 
-	tiled_map.init(source_file, my_options)
+	var options = {}
+	for key in import_options:
+		options[key] = import_options[key]
+
+	options["target"] = target_path
+	if options.tileset_directory != "":
+		if options.tileset_directory.is_abs_path():
+			if options.tileset_directory[-1] != "/":
+				options.tileset_directory = options.tileset_directory + "/"
+		else:
+			print("Cannot find tileset directory, tilesets will not be saved.")
+			options.save_tilesets = false
+
+	tiled_map.init(src, options)
 
 	var tiled_data = tiled_map.get_data()
 
 	if typeof(tiled_data) == TYPE_STRING:
-		# If is string then it's an error message
-		print("errdata: ", tiled_data)
-		return ERR_WTF
+		print(tiled_data)
+		return FAILED
+
+	if options.save_tilesets:
+		var dir = Directory.new()
+		dir.make_dir_recursive(options.tileset_directory)
 
 	var err = tiled_map.build()
-	if typeof(err) == TYPE_STRING and err != "OK":
-		# If is string then it's an error message
-		print("errbuild: ", err)
-		return ERR_WTF
+	if err != "OK":
+		return FAILED
 
 	var scene = tiled_map.get_scene()
+
+	var script_path = options["post_script"]
+	if typeof(script_path) == TYPE_STRING and script_path != "":
+		script_path = script_path.strip_edges()
+		
+		var script = load(script_path)
+		if not script or not script is GDScript:
+			print("Error loading post import script %s" % [script_path])
+			return FAILED
+		
+		script = script.new()
+		if not script.has_method("post_import"):
+			print('Script %s doesn\'t have "post_import" method' % script_path)
+			return FAILED
+
+		scene = script.post_import(scene)
+
+		if scene == null or not scene is Node2D:
+			print("Invalid scene returned from post import script %s" % script_path)
+			return FAILED
 
 	var packed_scene = PackedScene.new()
 	err = packed_scene.pack(scene)
 	if err != OK:
-		return err
+		print("Error packing scene")
+		return FAILED
 
-	err = ResourceSaver.save(full_path, packed_scene)
-
+	err = ResourceSaver.save(target_path, packed_scene)
 	if err != OK:
-		return err
+		print("Error saving scene")
+		return FAILED
 
-	base_plugin.reload_scene(source_file)
 	return OK
-
-func get_option_visibility(option, options):
-	return true
