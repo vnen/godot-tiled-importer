@@ -128,7 +128,7 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 		if not script or not script is GDScript:
 			print("Error loading post import script %s" % [script_path])
 			return FAILED
-
+		
 		script = script.new()
 		if not script.has_method("post_import"):
 			print('Script %s doesn\'t have "post_import" method' % script_path)

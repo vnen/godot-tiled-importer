@@ -282,7 +282,7 @@ func build():
 		var tileset_path = options.tileset_directory + basename + ".res"
 		var err = ResourceSaver.save(tileset_path, single_tileset, ResourceSaver.FLAG_CHANGE_PATH)
 		if err != OK:
-			return "Couldn't save TileSet"
+			return "Couldn't save bundled TileSet for %s.tmx" % [basename]
 		single_tileset.take_over_path(tileset_path)
 
 	if options.bundle_tilesets:
@@ -460,7 +460,7 @@ func build():
 						var rot = 0
 						if obj.has("rotation"):
 							rot = float(obj.rotation)
-						occluder.set_rotation_in_degrees(-rot)
+						occluder.set_rotation_degrees(-rot)
 
 						var obj_visible = true
 						if obj.has("visible"):
@@ -476,7 +476,7 @@ func build():
 							_set_meta(occluder, obj.properties, obj.propertytypes)
 
 					else:
-						var body = StaticBody2D.new()
+						var body = Area2D.new()
 						if obj.has("name") and not obj.name.empty():
 							body.set_name(obj.name);
 						else:
@@ -524,7 +524,7 @@ func build():
 								rot = rot_offset - rot
 							else:
 								rot = -rot
-						body.set_rotation_in_degrees(rot)
+						body.set_rotation_degrees(rot)
 
 						var shape_owner = body.create_shape_owner(body)
 						body.shape_owner_add_shape(shape_owner, shape)
@@ -586,7 +586,7 @@ func build():
 					var rot = 0
 					if obj.has("rotation"):
 						rot = float(obj.rotation)
-					sprite.set_rotation_in_degrees(-rot)
+					sprite.set_rotation_degrees(-rot)
 
 					var obj_visible = true
 					if obj.has("visible"):
