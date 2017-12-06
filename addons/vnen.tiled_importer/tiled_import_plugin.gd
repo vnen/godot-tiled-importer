@@ -23,6 +23,8 @@
 tool
 extends EditorImportPlugin
 
+var TiledMapReader = preload("tiled_map_reader.gd")
+
 func get_importer_name():
 	return "vnen.tiled_importer"
 
@@ -49,7 +51,16 @@ func get_import_options(preset):
 	return []
 
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
-	return ERR_CANT_CREATE
+	print(source_file)
+	var map_reader = TiledMapReader.new()
+
+	var scene = map_reader.build(source_file, options)
+
+	if typeof(scene) != TYPE_OBJECT:
+		# Error happened
+		return scene
+
+	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], scene, ResourceSaver.FLAG_BUNDLE_RESOURCES)
 
 func get_option_visibility(option, options):
 	return true
