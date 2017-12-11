@@ -29,6 +29,9 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
+# Polygon vertices sorter
+const PolygonSorter = preload("polygon_sorter.gd")
+
 # Main function
 # Reads a source file and gives back a full PackedScene
 func build(source_path, options):
@@ -149,6 +152,29 @@ func build_tileset(tilesets, source_path):
 			result.tile_set_texture(gid, image)
 			result.tile_set_region(gid, region)
 
+			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
+					and "objects" in ts.tiles[rel_id].objectgroup:
+				for object in ts.tiles[rel_id].objectgroup.objects:
+
+					var shape = shape_from_object(object)
+
+					if typeof(shape) != TYPE_OBJECT:
+						# Error happened
+						return shape
+
+					var offset = Vector2(float(object.x), float(object.y))
+					if "width" in object and "height" in object:
+						offset += Vector2(float(object.width) / 2, float(object.height) / 2)
+
+					if object.type == "navigation":
+						result.tile_set_navigation_polygon(gid, shape)
+						result.tile_set_navigation_polygon_offset(gid, offset)
+					elif object.type == "occluder":
+						result.tile_set_light_occluder(gid, shape)
+						result.tile_set_occluder_offset(gid, offset)
+					else:
+						result.tile_add_shape(gid, shape, Transform2D(0, offset))
+
 			gid += 1
 			i += 1
 			x += int(tilesize.x) + spacing
@@ -161,8 +187,9 @@ func build_tileset(tilesets, source_path):
 
 	return result
 
-
-func load_image(rel_path, source_path):
+# Loads an image from a given path
+# Returns a Texture
+func load_image(rel_path, source_path, flags = Texture.FLAGS_DEFAULT):
 	var total_path = rel_path if rel_path.is_abs_path() else source_path.get_base_dir().plus_file(rel_path)
 	var dir = Directory.new()
 	if not dir.file_exists(total_path):
@@ -171,7 +198,7 @@ func load_image(rel_path, source_path):
 
 	var image = ImageTexture.new()
 	image.load(total_path)
-	image.set_flags(Texture.FLAGS_DEFAULT)
+	image.set_flags(flags)
 
 	return image
 
@@ -190,6 +217,115 @@ func read_file(path):
 		return content.error
 
 	return content.result
+
+# Creates a shape from an object data
+# Returns a valid shape depending on the object type (collision/occluder/navigation)
+func shape_from_object(object):
+	var shape = ERR_INVALID_DATA
+
+	if "polygon" in object or "polyline" in object:
+		var vertices = PoolVector2Array()
+
+		if "polygon" in object:
+			for point in object.polygon:
+				vertices.push_back(Vector2(float(point.x), float(point.y)))
+		else:
+			for point in object.polyline:
+				vertices.push_back(Vector2(float(point.x), float(point.y)))
+
+		if object.type == "navigation":
+			shape = NavigationPolygon.new()
+			shape.vertices = vertices
+			shape.add_outline(vertices)
+			shape.make_polygons_from_outlines()
+		elif object.type == "occluder":
+			shape = OccluderPolygon2D.new()
+			shape.polygon = vertices
+			shape.closed = "polygon" in object
+		else:
+			if is_convex(vertices):
+				shape = ConvexPolygonShape2D.new()
+				var sorter = PolygonSorter.new()
+				shape.points = sorter.sort_polygon(vertices)
+			else:
+				shape = ConcavePolygonShape2D.new()
+				var segments = [vertices[0]]
+				for x in range(1, vertices.size()):
+					segments.push_back(vertices[x])
+					segments.push_back(vertices[x])
+				segments.push_back(vertices[0])
+				shape.segments = segments
+	elif "ellipse" in object:
+		if object.type == "navigation" or object.type == "occluder":
+			printerr("Ellipse shapes are not supported as navigation or occluder. Use polygon/polyline instead.")
+			return ERR_INVALID_DATA
+
+		if not "width" in object or not "height" in object:
+			printerr("Missing width or height in ellipse shape.")
+			return ERR_INVALID_DATA
+
+		var w = float(object.width)
+		var h = float(object.height)
+
+		if w == h:
+			shape = CircleShape2D.new()
+			shape.radius = w / 2.0
+		else:
+			# Using a capsule since it's the closest from an ellipse
+			shape = CapsuleShape2D.new()
+			shape.radius = w / 2.0
+			shape.height = h / 2.0
+
+	else: # Rectangle
+		if not "width" in object or not "height" in object:
+			printerr("Missing width or height in rectangle shape.")
+			return ERR_INVALID_DATA
+
+		var size = Vector2(float(object.width), float(object.height))
+
+		if object.type == "navigation" or object.type == "occluder":
+			# Those types only accept polygons, so make one from the rectangle
+			var vertices = PoolVector2Array([
+					Vector2(0, 0),
+					Vector2(size.x, 0),
+					size,
+					Vector2(0, size.y)
+			])
+			if object.type == "navigation":
+				shape = NavigationPolygon.new()
+				shape.vertices = vertices
+				shape.add_outline(vertices)
+				shape.make_polygons_from_outlines()
+			else:
+				shape = OccluderPolygon2D.new()
+				shape.polygon = vertices
+		else:
+			shape = RectangleShape2D.new()
+			shape.extents = size / 2.0
+
+	return shape
+
+# Determines if the set of vertices is convex or not
+# Returns a boolean
+func is_convex(vertices):
+	var size = vertices.size()
+	if size <= 3:
+		# Less than 3 verices can't be concave
+		return true
+
+	var cp = 0
+
+	for i in range(0, size + 2):
+		var p1 = vertices[(i + 0) % size]
+		var p2 = vertices[(i + 1) % size]
+		var p3 = vertices[(i + 2) % size]
+
+		var prev_cp = cp
+		cp = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x)
+		if i > 0 and sign(cp) != sign(prev_cp):
+			return false
+
+	return true
 
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code
