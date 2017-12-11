@@ -67,7 +67,7 @@ func build(source_path, options):
 			return err
 
 		var opacity = float(layer.opacity) if "opacity" in layer else 1.0
-		var visible = bool(layer.visible) if "visible" in layer else false
+		var visible = bool(layer.visible) if "visible" in layer else true
 
 		if layer.type == "tilelayer":
 			var layer_data = layer.data
@@ -118,6 +118,33 @@ func build(source_path, options):
 
 			root.add_child(tilemap)
 			tilemap.set_owner(root)
+		if layer.type == "imagelayer":
+			var image = load_image(layer.image, source_path)
+			if typeof(image) != TYPE_OBJECT:
+				# Error happened
+				return image
+
+			var pos = Vector2()
+			var offset = Vector2()
+
+			if "x" in layer:
+				pos.x = float(layer.x)
+			if "y" in layer:
+				pos.y = float(layer.y)
+			if "offsetx" in layer:
+				offset.x = float(layer.offsetx)
+			if "offsety" in layer:
+				offset.y = float(layer.offsety)
+
+			var sprite = Sprite.new()
+			sprite.set_name(layer.name)
+			sprite.centered = false
+			sprite.texture = image
+			sprite.visible = visible
+			sprite.self_modulate = Color(1.0, 1.0, 1.0, opacity)
+			root.add_child(sprite)
+			sprite.position = pos + offset
+			sprite.set_owner(root)
 
 	var scene = PackedScene.new()
 	scene.pack(root)
@@ -199,6 +226,11 @@ func build_tileset(tilesets, source_path):
 # Loads an image from a given path
 # Returns a Texture
 func load_image(rel_path, source_path, flags = Texture.FLAGS_DEFAULT):
+	var ext = rel_path.get_extension().to_lower()
+	if ext != "png" and ext != "jpg":
+		printerr("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
+		return ERR_FILE_UNRECOGNIZED
+
 	var total_path = rel_path if rel_path.is_abs_path() else source_path.get_base_dir().plus_file(rel_path)
 	var dir = Directory.new()
 	if not dir.file_exists(total_path):
@@ -442,4 +474,8 @@ func validate_layer(layer):
 			if layer.compression != "gzip" and layer.compression != "zlib":
 				printerr("Invalid compression type.")
 				return ERR_INVALID_DATA
+	elif layer.type == "imagelayer":
+		if not "image" in layer or typeof(layer.image) != TYPE_STRING:
+			printerr("Missing or invalid image path for layer.")
+			return ERR_INVALID_DATA
 	return OK
