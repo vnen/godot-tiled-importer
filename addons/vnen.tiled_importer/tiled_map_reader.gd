@@ -378,21 +378,24 @@ func decompress_layer(layer_data, compression, map_size):
 	var expected_size = int(map_size.x) * int(map_size.y) * 4
 	var raw_data = Marshalls.base64_to_raw(layer_data).decompress(expected_size, compression_type)
 
-	return read_base64_layer(Marshalls.raw_to_base64(raw_data))
+	return decode_layer(raw_data)
 
 # Reads the layer as a base64 data
 # Returns an array of ints as the decoded layer would be
 func read_base64_layer(layer_data):
-	var result = []
 	var decoded = Marshalls.base64_to_raw(layer_data)
+	return decode_layer(decoded)
 
-	for i in range(0, decoded.size(), 4):
-		var num = (decoded[i]) | \
-				(decoded[i + 1] << 8) | \
-				(decoded[i + 2] << 16) | \
-				(decoded[i + 3] << 24)
+# Reads a PoolByteArray and returns the layer array
+# Used for base64 encoded and compressed layers
+func decode_layer(layer_data):
+	var result = []
+	for i in range(0, layer_data.size(), 4):
+		var num = (layer_data[i]) | \
+				(layer_data[i + 1] << 8) | \
+				(layer_data[i + 2] << 16) | \
+				(layer_data[i + 3] << 24)
 		result.push_back(num)
-
 	return result
 
 # Validates the map dictionary content for missing or invalid keys
