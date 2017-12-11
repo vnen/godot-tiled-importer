@@ -59,7 +59,7 @@ func build(source_path, options):
 		return tileset
 
 	var root = Node2D.new()
-	root.set_name(source_path.get_basename())
+	root.set_name(source_path.get_file().get_basename())
 
 	for layer in map.layers:
 		err = validate_layer(layer)
@@ -71,6 +71,15 @@ func build(source_path, options):
 
 		if layer.type == "tilelayer":
 			var layer_data = layer.data
+
+			if "encoding" in layer and layer.encoding == "base64":
+				if "compression" in layer:
+					layer_data = decompress_layer(layer_data, layer.compression, map_size)
+					if typeof(layer_data) == TYPE_INT:
+						# Error happened
+						return layer_data
+				else:
+					layer_data = read_base64_layer(layer_data)
 
 			var tilemap = TileMap.new()
 			tilemap.set_name(layer.name)
@@ -202,7 +211,6 @@ func load_image(rel_path, source_path, flags = Texture.FLAGS_DEFAULT):
 
 	return image
 
-
 # Reads a file and returns its contents as a dictionary
 # Returns an error code if fails
 func read_file(path):
@@ -327,6 +335,34 @@ func is_convex(vertices):
 
 	return true
 
+# Decompress the data of the layer
+# Compression argument is a string, either "gzip" or "zlib"
+func decompress_layer(layer_data, compression, map_size):
+	if compression != "gzip" and compression != "zlib":
+		printerr("Unrecognized compression format: %s" % [compression])
+		return ERR_INVALID_DATA
+
+	var compression_type = File.COMPRESSION_DEFLATE if compression == "zlib" else File.COMPRESSION_GZIP
+	var expected_size = int(map_size.x) * int(map_size.y) * 4
+	var raw_data = Marshalls.base64_to_raw(layer_data).decompress(expected_size, compression_type)
+
+	return read_base64_layer(Marshalls.raw_to_base64(raw_data))
+
+# Reads the layer as a base64 data
+# Returns an array of ints as the decoded layer would be
+func read_base64_layer(layer_data):
+	var result = []
+	var decoded = Marshalls.base64_to_raw(layer_data)
+
+	for i in range(0, decoded.size(), 4):
+		var num = (decoded[i]) | \
+				(decoded[i + 1] << 8) | \
+				(decoded[i + 2] << 16) | \
+				(decoded[i + 3] << 24)
+		result.push_back(num)
+
+	return result
+
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code
 func validate_map(map):
@@ -391,8 +427,19 @@ func validate_layer(layer):
 	elif not "name" in layer:
 		printerr("Missing or invalid name layer property.")
 		return ERR_INVALID_DATA
-	if layer.type == "tilelayer":
-		if not "data" in layer or typeof(layer.data) != TYPE_ARRAY:
-			printerr("Missing or invalid data layer property.")
+	elif layer.type == "tilelayer":
+		if not "data" in layer:
+			printerr("Missing data layer property.")
 			return ERR_INVALID_DATA
+		elif "encoding" in layer:
+			if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
+				printerr("Invalid data layer property.")
+				return ERR_INVALID_DATA
+		elif typeof(layer.data) != TYPE_ARRAY:
+			printerr("Invalid data layer property.")
+			return ERR_INVALID_DATA
+		elif "compression" in layer:
+			if layer.compression != "gzip" and layer.compression != "zlib":
+				printerr("Invalid compression type.")
+				return ERR_INVALID_DATA
 	return OK
