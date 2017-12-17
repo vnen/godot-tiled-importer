@@ -99,7 +99,7 @@ func build(source_path, options):
 
 			var count = 0
 			for tile_id in layer_data:
-				var int_id = int(str(tile_id))
+				var int_id = int(str(tile_id)) & 0xFFFFFFFF
 
 				if int_id == 0:
 					count += 1
@@ -109,7 +109,7 @@ func build(source_path, options):
 				var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
 				var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
 
-				var gid = int_id & 0xFFFFFFFF & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+				var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 
 				var cell_pos = Vector2(count % int(map_size.x), int(count / map_size.x))
 				tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
@@ -118,7 +118,7 @@ func build(source_path, options):
 
 			root.add_child(tilemap)
 			tilemap.set_owner(root)
-		if layer.type == "imagelayer":
+		elif layer.type == "imagelayer":
 			var image = load_image(layer.image, source_path)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
@@ -145,6 +145,168 @@ func build(source_path, options):
 			root.add_child(sprite)
 			sprite.position = pos + offset
 			sprite.set_owner(root)
+		elif layer.type == "objectgroup":
+			var object_layer = Node2D.new()
+			root.add_child(object_layer)
+			object_layer.set_owner(root)
+			if "name" in layer and not layer.name.empty():
+				object_layer.set_name(layer.name)
+			for object in layer.objects:
+				if "point" in object and object.point:
+					var point = Position2D.new()
+					if not "x" in object or not "y" in object:
+						printerr("Missing coordinates for point in object layer.")
+						continue
+					point.position = Vector2(float(object.x), float(object.y))
+					point.visible = bool(object.visible) if "visible" in object else true
+					object_layer.add_child(point)
+					point.set_owner(root)
+					if "name" in object and not str(object.name).empty():
+						point.set_name(str(object.name))
+					elif "id" in object and not str(object.id).empty():
+						point.set_name(str(object.id))
+
+				elif not "gid" in object:
+					# Not a tile object
+					if "type" in object and object.type == "navigation":
+						# Can't make navigation objects right now
+						printerr("Navigation polygons aren't supported in an object layer.")
+						continue # Non-fatal error
+					var shape = shape_from_object(object)
+
+					if typeof(shape) != TYPE_OBJECT:
+						# Error happened
+						return shape
+
+					if "type" in object and object.type == "occluder":
+						var occluder = LightOccluder2D.new()
+						var pos = Vector2()
+						var rot = 0
+
+						if "x" in object:
+							pos.x = float(object.x)
+						if "y" in object:
+							pos.y = float(object.y)
+						if "rotation" in object:
+							rot = float(object.rotation)
+
+						occluder.visible = bool(object.visible) if "visible" in object else true
+						occluder.position = pos
+						occluder.rotation_degrees = rot
+						occluder.occluder = shape
+						if "name" in object and not str(object.name).empty():
+							occluder.set_name(str(object.name))
+						elif "id" in object and not str(object.id).empty():
+							occluder.set_name(str(object.id))
+
+						object_layer.add_child(occluder)
+						occluder.set_owner(root)
+
+					else:
+						var body = StaticBody2D.new()
+
+						var offset = Vector2()
+						var collision
+						var pos = Vector2()
+						var rot = 0
+
+						if not ("polygon" in object or "polyline" in object):
+							# Regular shape
+							collision = CollisionShape2D.new()
+							collision.shape = shape
+							if shape is RectangleShape2D:
+								offset = shape.extents
+							elif shape is CircleShape2D:
+								offset = Vector2(shape.radius, shape.radius)
+							elif shape is CapsuleShape2D:
+								offset = Vector2(shape.radius, shape.height)
+								if shape.radius > shape.height:
+									var temp = shape.radius
+									shape.radius = shape.height
+									shape.height = temp
+									collision.rotation_degrees = 90
+								shape.height *= 2
+							collision.position = offset
+						else:
+							collision = CollisionPolygon2D.new()
+							var points = null
+							if shape is ConcavePolygonShape2D:
+								points = []
+								var segments = shape.segments
+								for i in range(0, segments.size()):
+									if i % 2 != 0:
+										continue
+									points.push_back(segments[i])
+								collision.build_mode = CollisionPolygon2D.BUILD_SEGMENTS
+							else:
+								points = shape.points
+								collision.build_mode = CollisionPolygon2D.BUILD_SOLIDS
+							collision.polygon = points
+
+						if "x" in object:
+							pos.x = float(object.x)
+						if "y" in object:
+							pos.y = float(object.y)
+						if "rotation" in object:
+							rot = float(object.rotation)
+
+						object_layer.add_child(body)
+						body.set_owner(root)
+						body.add_child(collision)
+						collision.set_owner(root)
+
+						if "name" in object and not str(object.name).empty():
+							body.set_name(str(object.name))
+						elif "id" in object and not str(object.id).empty():
+							body.set_name(str(object.id))
+						body.visible = bool(object.visible) if "visible" in object else true
+						body.position = pos
+						body.rotation_degrees = rot
+
+				else: # "gid" in object
+					var tile_raw_id = int(str(object.gid)) & 0xFFFFFFFF
+					var tile_id = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+
+					var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
+					var sprite = Sprite.new()
+					var pos = Vector2()
+					var rot = 0
+					sprite.texture = tileset.tile_get_texture(tile_id)
+
+					if not is_tile_object:
+						sprite.region_enabled = true
+						sprite.region_rect = tileset.tile_get_region(tile_id)
+
+					if "name" in object and not str(object.name).empty():
+						sprite.set_name(str(object.name))
+					elif "id" in object and not str(object.id).empty():
+						sprite.set_name(str(object.id))
+
+					sprite.flip_h = bool(tile_id & FLIPPED_HORIZONTALLY_FLAG)
+					sprite.flip_v = bool(tile_id & FLIPPED_VERTICALLY_FLAG)
+
+					if "x" in object:
+						pos.x = float(object.x)
+					if "y" in object:
+						pos.y = float(object.y)
+					if "rotation" in object:
+						rot = float(object.rotation)
+
+					if is_tile_object:
+						# Tile object positions are oriented bottom left.
+						# If we import their positioning data as is, their position ends up skewed incorrectly.
+						pos.x = pos.x + float(object.width) / 2
+						pos.y = pos.y - float(object.height) / 2
+
+					sprite.position = pos
+					sprite.rotation_degrees = rot
+					sprite.visible = bool(object.visible) if "visible" in object else true
+
+					object_layer.add_child(sprite)
+					sprite.set_owner(root)
+
+		else:
+			printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
 
 	var scene = PackedScene.new()
 	scene.pack(root)
@@ -304,8 +466,8 @@ func shape_from_object(object):
 			printerr("Missing width or height in ellipse shape.")
 			return ERR_INVALID_DATA
 
-		var w = float(object.width)
-		var h = float(object.height)
+		var w = abs(float(object.width))
+		var h = abs(float(object.height))
 
 		if w == h:
 			shape = CircleShape2D.new()
@@ -480,5 +642,9 @@ func validate_layer(layer):
 	elif layer.type == "imagelayer":
 		if not "image" in layer or typeof(layer.image) != TYPE_STRING:
 			printerr("Missing or invalid image path for layer.")
+			return ERR_INVALID_DATA
+	elif layer.type == "objectgroup":
+		if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
+			printerr("Missing or invalid objects array for layer.")
 			return ERR_INVALID_DATA
 	return OK
