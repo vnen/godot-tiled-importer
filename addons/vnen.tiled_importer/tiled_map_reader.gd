@@ -322,14 +322,21 @@ func build_tileset(tilesets, source_path):
 		if err != OK:
 			return err
 
+		var has_global_image = "image" in ts
+
 		var spacing = int(ts.spacing) if "spacing" in ts and str(ts.spacing).is_valid_integer() else 0
 		var margin = int(ts.margin) if "margin" in ts and str(ts.margin).is_valid_integer() else 0
 		var firstgid = int(ts.firstgid)
-		var image = load_image(ts.image, source_path)
-		if typeof(image) != TYPE_OBJECT:
-			# Error happened
-			return image
-		var imagesize = Vector2(int(ts.imagewidth), int(ts.imageheight))
+
+		var image = null
+		var imagesize = Vector2()
+
+		if has_global_image:
+			image = load_image(ts.image, source_path)
+			if typeof(image) != TYPE_OBJECT:
+				# Error happened
+				return image
+			imagesize = Vector2(int(ts.imagewidth), int(ts.imageheight))
 
 		var tilesize = Vector2(int(ts.tilewidth), int(ts.tileheight))
 		var tilecount = int(ts.tilecount)
@@ -347,8 +354,20 @@ func build_tileset(tilesets, source_path):
 			var rel_id = str(gid - firstgid)
 
 			result.create_tile(gid)
-			result.tile_set_texture(gid, image)
-			result.tile_set_region(gid, region)
+
+			if has_global_image:
+				result.tile_set_texture(gid, image)
+				result.tile_set_region(gid, region)
+			elif not rel_id in ts.tiles:
+				gid += 1
+				continue
+			else:
+				var image_path = ts.tiles[rel_id].image
+				image = load_image(image_path, source_path)
+				if typeof(image) != TYPE_OBJECT:
+					# Error happened
+					return image
+				result.tile_set_texture(gid, image)
 
 			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
 					and "objects" in ts.tiles[rel_id].objectgroup:
@@ -605,8 +624,10 @@ func validate_tileset(tileset):
 		printerr("Missing or invalid tilecount tileset property.")
 		return ERR_INVALID_DATA
 	elif not "image" in tileset:
-		printerr("Missing or invalid image tileset property.")
-		return ERR_INVALID_DATA
+		for tile in tileset.tiles:
+			if not "image" in tileset.tiles[tile]:
+				printerr("Missing or invalid image in tileset property.")
+				return ERR_INVALID_DATA
 	elif not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
 		printerr("Missing or invalid imagewidth tileset property.")
 		return ERR_INVALID_DATA
