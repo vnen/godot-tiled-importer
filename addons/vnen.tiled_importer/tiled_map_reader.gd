@@ -53,7 +53,7 @@ func build(source_path, options):
 			"isometric": map_mode = TileMap.MODE_ISOMETRIC
 			# TODO: staggered and hexagonal orientations
 
-	var tileset = build_tileset(map.tilesets, source_path)
+	var tileset = build_tileset(map.tilesets, source_path, options)
 	if typeof(tileset) != TYPE_OBJECT:
 		# Error happened
 		return tileset
@@ -87,6 +87,7 @@ func build(source_path, options):
 			tilemap.self_modulate = Color(1.0, 1.0, 1.0, opacity);
 			tilemap.visible = visible
 			tilemap.mode = map_mode
+			tilemap.cell_clip_uv = options.uv_clip
 
 			var offset = Vector2()
 			if "offsetx" in layer:
@@ -119,7 +120,7 @@ func build(source_path, options):
 			root.add_child(tilemap)
 			tilemap.set_owner(root)
 		elif layer.type == "imagelayer":
-			var image = load_image(layer.image, source_path)
+			var image = load_image(layer.image, source_path, options.image_flags)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
 				return image
@@ -314,7 +315,7 @@ func build(source_path, options):
 
 # Make a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
-func build_tileset(tilesets, source_path):
+func build_tileset(tilesets, source_path, options):
 	var result = TileSet.new()
 
 	for ts in tilesets:
@@ -332,7 +333,7 @@ func build_tileset(tilesets, source_path):
 		var imagesize = Vector2()
 
 		if has_global_image:
-			image = load_image(ts.image, source_path)
+			image = load_image(ts.image, source_path, options.image_flags)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
 				return image
@@ -363,7 +364,7 @@ func build_tileset(tilesets, source_path):
 				continue
 			else:
 				var image_path = ts.tiles[rel_id].image
-				image = load_image(image_path, source_path)
+				image = load_image(image_path, source_path, options.image_flags)
 				if typeof(image) != TYPE_OBJECT:
 					# Error happened
 					return image

@@ -48,10 +48,42 @@ func get_preset_name(preset):
 		0: return "Default"
 
 func get_import_options(preset):
-	return []
+	return [
+		{
+			"name": "custom_properties",
+			"default_value": true
+		},
+		{
+			"name": "uv_clip",
+			"default_value": true
+		},
+		{
+			"name": "image_flags",
+			"default_value": Texture.FLAGS_DEFAULT,
+			"property_hint": PROPERTY_HINT_FLAGS,
+			"hint_string": "Mipmaps,Repeat,Filter,Anisotropic,sRGB,Mirrored Repeat"
+		},
+		{
+			"name": "embed_internal_images",
+			"default_value": false
+		},
+		{
+			"name": "save_tiled_properties",
+			"default_value": false
+		},
+		{
+			"name": "post_import_script",
+			"default_value": "",
+			"property_hint": PROPERTY_HINT_FILE,
+			"hint_string": "*.gd"
+		}
+	]
+
+func get_option_visibility(option, options):
+	return true
 
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
-	print(source_file)
+	print(source_file, options)
 	var map_reader = TiledMapReader.new()
 
 	var scene = map_reader.build(source_file, options)
@@ -61,6 +93,3 @@ func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 		return scene
 
 	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], scene, ResourceSaver.FLAG_BUNDLE_RESOURCES)
-
-func get_option_visibility(option, options):
-	return true
