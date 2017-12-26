@@ -33,7 +33,7 @@ const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 const PolygonSorter = preload("polygon_sorter.gd")
 
 # Main function
-# Reads a source file and gives back a full PackedScene
+# Reads a source file and gives back a scene
 func build(source_path, options):
 	var map = read_file(source_path)
 	if typeof(map) == TYPE_INT:
@@ -332,9 +332,7 @@ func build(source_path, options):
 		else:
 			printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
 
-	var scene = PackedScene.new()
-	scene.pack(root)
-	return scene
+	return root
 
 # Make a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
@@ -622,7 +620,6 @@ func set_custom_properties(object, tiled_object):
 		else:
 			value = str(properties[property])
 		object.set_meta(property, value)
-		prints("metadata", property, value)
 
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code

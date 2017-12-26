@@ -75,7 +75,7 @@ func get_import_options(preset):
 			"name": "post_import_script",
 			"default_value": "",
 			"property_hint": PROPERTY_HINT_FILE,
-			"hint_string": "*.gd"
+			"hint_string": "*.gd;GDScript"
 		}
 	]
 
@@ -92,4 +92,24 @@ func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 		# Error happened
 		return scene
 
-	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], scene, ResourceSaver.FLAG_BUNDLE_RESOURCES)
+	# Post imports script
+	if not options.post_import_script.empty():
+		var script = load(options.post_import_script)
+		if not script or not script is GDScript:
+			printerr("Post import script is not a GDScript.")
+			return ERR_INVALID_PARAMETER
+
+		script = script.new()
+		if not script.has_method("post_import"):
+			printerr("Post import script does not have a 'post_import' method.")
+			return ERR_INVALID_PARAMETER
+
+		scene = script.post_import(scene)
+
+		if not scene or not scene is Node2D:
+			printerr("Invalid scene returned from post import script.")
+			return ERR_INVALID_DATA
+
+	var packed_scene = PackedScene.new()
+	packed_scene.pack(scene)
+	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], packed_scene)
