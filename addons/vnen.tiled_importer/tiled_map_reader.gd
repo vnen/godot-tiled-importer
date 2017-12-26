@@ -60,6 +60,8 @@ func build(source_path, options):
 
 	var root = Node2D.new()
 	root.set_name(source_path.get_file().get_basename())
+	if options.custom_properties:
+		set_custom_properties(root, map)
 
 	for layer in map.layers:
 		err = validate_layer(layer)
@@ -117,13 +119,18 @@ func build(source_path, options):
 
 				count += 1
 
+			if options.custom_properties:
+				set_custom_properties(tilemap, layer)
+
 			root.add_child(tilemap)
 			tilemap.set_owner(root)
 		elif layer.type == "imagelayer":
-			var image = load_image(layer.image, source_path, options.image_flags)
-			if typeof(image) != TYPE_OBJECT:
-				# Error happened
-				return image
+			var image = null
+			if layer.image != "":
+				image = load_image(layer.image, source_path, options.image_flags)
+				if typeof(image) != TYPE_OBJECT:
+					# Error happened
+					return image
 
 			var pos = Vector2()
 			var offset = Vector2()
@@ -143,11 +150,15 @@ func build(source_path, options):
 			sprite.texture = image
 			sprite.visible = visible
 			sprite.self_modulate = Color(1.0, 1.0, 1.0, opacity)
+			if options.custom_properties:
+				set_custom_properties(sprite, layer)
 			root.add_child(sprite)
 			sprite.position = pos + offset
 			sprite.set_owner(root)
 		elif layer.type == "objectgroup":
 			var object_layer = Node2D.new()
+			if options.custom_properties:
+				set_custom_properties(object_layer, layer)
 			root.add_child(object_layer)
 			object_layer.set_owner(root)
 			if "name" in layer and not layer.name.empty():
@@ -166,6 +177,8 @@ func build(source_path, options):
 						point.set_name(str(object.name))
 					elif "id" in object and not str(object.id).empty():
 						point.set_name(str(object.id))
+					if options.custom_properties:
+						set_custom_properties(point, object)
 
 				elif not "gid" in object:
 					# Not a tile object
@@ -199,6 +212,9 @@ func build(source_path, options):
 							occluder.set_name(str(object.name))
 						elif "id" in object and not str(object.id).empty():
 							occluder.set_name(str(object.id))
+
+						if options.custom_properties:
+							set_custom_properties(occluder, object)
 
 						object_layer.add_child(occluder)
 						occluder.set_owner(root)
@@ -256,6 +272,9 @@ func build(source_path, options):
 						body.add_child(collision)
 						collision.set_owner(root)
 
+						if options.custom_properties:
+							set_custom_properties(body, object)
+
 						if "name" in object and not str(object.name).empty():
 							body.set_name(str(object.name))
 						elif "id" in object and not str(object.id).empty():
@@ -302,9 +321,13 @@ func build(source_path, options):
 					sprite.position = pos
 					sprite.rotation_degrees = rot
 					sprite.visible = bool(object.visible) if "visible" in object else true
+					sprite.region_filter_clip = options.uv_clip
 
 					object_layer.add_child(sprite)
 					sprite.set_owner(root)
+
+					if options.custom_properties:
+						set_custom_properties(sprite, object)
 
 		else:
 			printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
@@ -579,6 +602,27 @@ func decode_layer(layer_data):
 				(layer_data[i + 3] << 24)
 		result.push_back(num)
 	return result
+
+# Set the custom properties into the metadata of the object
+func set_custom_properties(object, tiled_object):
+	if not "properties" in tiled_object or not "propertytypes" in tiled_object:
+		return
+	var properties = tiled_object.properties
+	var types = tiled_object.propertytypes
+	for property in properties:
+		var value = null
+		if str(types[property]).to_lower() == "bool":
+			value = bool(properties[property])
+		elif str(types[property]).to_lower() == "int":
+			value = int(properties[property])
+		elif str(types[property]).to_lower() == "float":
+			value = float(properties[property])
+		elif str(types[property]).to_lower() == "color":
+			value = Color(properties[property])
+		else:
+			value = str(properties[property])
+		object.set_meta(property, value)
+		prints("metadata", property, value)
 
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code
