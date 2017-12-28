@@ -350,21 +350,28 @@ func build_tileset(tilesets, source_path, options):
 				printerr("Missing or invalid firstgid tileset property.")
 				return ERR_INVALID_DATA
 
-			var f = File.new()
-			err = f.open(source_path.get_base_dir().plus_file(ts.source), File.READ)
-			if err != OK:
-				printerr("Error opening tileset '%s'." % [ts.source])
-				return err
+			if ts.source.get_extension().to_lower() == "tsx":
+				var tsx_reader = TiledXMLToDictionary.new()
+				ts = tsx_reader.read_tsx(source_path.get_base_dir().plus_file(ts.source))
+				if typeof(ts) != TYPE_DICTIONARY:
+					# Error happened
+					return ts
+			else: # JSON Tileset
+				var f = File.new()
+				err = f.open(source_path.get_base_dir().plus_file(ts.source), File.READ)
+				if err != OK:
+					printerr("Error opening tileset '%s'." % [ts.source])
+					return err
 
-			var json_res = JSON.parse(f.get_as_text())
-			if json_res.error != OK:
-				printerr("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
-				return ERR_INVALID_DATA
+				var json_res = JSON.parse(f.get_as_text())
+				if json_res.error != OK:
+					printerr("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
+					return ERR_INVALID_DATA
 
-			ts = json_res.result
-			if typeof(ts) != TYPE_DICTIONARY:
-				printerr("Tileset '%s' is not a dictionary." % [ts.source])
-				return ERR_INVALID_DATA
+				ts = json_res.result
+				if typeof(ts) != TYPE_DICTIONARY:
+					printerr("Tileset '%s' is not a dictionary." % [ts.source])
+					return ERR_INVALID_DATA
 
 			ts.firstgid = tileset.firstgid
 

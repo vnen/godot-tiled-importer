@@ -23,9 +23,9 @@
 tool
 extends Reference
 
-# Read a TMX file from a path and return a Dictionary with the same structure
+# Reads a TMX file from a path and return a Dictionary with the same structure
 # as the JSON map format
-# Return an error code if failed
+# Returns an error code if failed
 func read_tmx(path):
 	var parser = XMLParser.new()
 	var err = parser.open(path)
@@ -113,8 +113,29 @@ func read_tmx(path):
 
 	return data
 
-# Parse a tileset element from the XML and return a dictionary
-# Return an error code if fails
+# Reads a TSX and return a tileset dictionary
+# Returns an error code if fails
+func read_tsx(path):
+	var parser = XMLParser.new()
+	var err = parser.open(path)
+	if err != OK:
+		printerr("Error opening TSX file '%s'." % [path])
+		return err
+
+	while parser.get_node_type() != XMLParser.NODE_ELEMENT:
+		err = parser.read()
+		if err != OK:
+			printerr("Error parsing TSX file '%s' (around line %i)." % [path, parser.get_current_line()])
+			return err
+
+	if parser.get_node_name().to_lower() != "tileset":
+		printerr("Error parsing TMX file '%s'. Expected 'map' element.")
+		return ERR_INVALID_DATA
+
+	return parse_tileset(parser)
+
+# Parses a tileset element from the XML and return a dictionary
+# Returns san error code if fails
 func parse_tileset(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
@@ -157,8 +178,8 @@ func parse_tileset(parser):
 
 	return data
 
-# Parse the data of a single tile from the XML and return a dictionary
-# Return an error code if fails
+# Parses the data of a single tile from the XML and return a dictionary
+# Returns an error code if fails
 func parse_tile_data(parser):
 	var err = OK
 	var data = {}
@@ -214,8 +235,8 @@ func parse_tile_data(parser):
 
 	return data
 
-# Parse the data of a single object from the XML and return a dictionary
-# Return an error code if fails
+# Parses the data of a single object from the XML and return a dictionary
+# Returns an error code if fails
 func parse_object(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
@@ -260,8 +281,8 @@ func parse_object(parser):
 
 	return data
 
-# Parse a tile layer from the XML and return a dictionary
-# Return an error code if fails
+# Parses a tile layer from the XML and return a dictionary
+# Returns an error code if fails
 func parse_tile_layer(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
@@ -312,8 +333,8 @@ func parse_tile_layer(parser):
 
 	return data
 
-# Parse an object layer from the XML and return a dictionary
-# Return an error code if fails
+# Parses an object layer from the XML and return a dictionary
+# Returns an error code if fails
 func parse_object_layer(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
@@ -341,8 +362,8 @@ func parse_object_layer(parser):
 
 	return data
 
-# Parse an image layer from the XML and return a dictionary
-# Return an error code if fails
+# Parses an image layer from the XML and return a dictionary
+# Returns an error code if fails
 func parse_image_layer(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
@@ -375,13 +396,13 @@ func parse_image_layer(parser):
 
 	return data
 
-# Parse a group layer from the XML and return a dictionary
-# Return an error code if fails
+# Parses a group layer from the XML and return a dictionary
+# Returns an error code if fails
 func parse_group_layer(parser):
 	return {}
 
-# Parse properties data from the XML and return a dictionary
-# Return an error code if fails
+# Parses properties data from the XML and return a dictionary
+# Returns an error code if fails
 func parse_properties(parser):
 	var err = OK
 	var data = {
@@ -413,7 +434,7 @@ func parse_properties(parser):
 
 	return data
 
-# Read the attributes of the current element and return them as a dictionary
+# Reads the attributes of the current element and return them as a dictionary
 func attributes_to_dict(parser):
 	var data = {}
 	for i in range(parser.get_attribute_count()):
