@@ -66,247 +66,163 @@ func build(source_path, options):
 	if options.custom_properties:
 		set_custom_properties(root, map)
 
+	var map_data = {
+		"options": options,
+		"map_size": map_size,
+		"map_mode": map_mode,
+		"cell_size": cell_size,
+		"tileset": tileset,
+		"source_path": source_path
+	}
+
 	for layer in map.layers:
-		err = validate_layer(layer)
-		if err != OK:
-			return err
+		make_layer(layer, root, root, map_data)
 
-		var opacity = float(layer.opacity) if "opacity" in layer else 1.0
-		var visible = bool(layer.visible) if "visible" in layer else true
+	return root
 
-		if layer.type == "tilelayer":
-			var layer_data = layer.data
+# Creates a layer node from the data
+# Returns an error code
+func make_layer(layer, parent, root, data):
+	var err = validate_layer(layer)
+	if err != OK:
+		return err
 
-			if "encoding" in layer and layer.encoding == "base64":
-				if "compression" in layer:
-					layer_data = decompress_layer(layer_data, layer.compression, map_size)
-					if typeof(layer_data) == TYPE_INT:
-						# Error happened
-						return layer_data
-				else:
-					layer_data = read_base64_layer(layer_data)
+	# Main map data
+	var map_size = data.map_size
+	var map_mode = data.map_mode
+	var cell_size = data.cell_size
+	var options = data.options
+	var tileset = data.tileset
+	var source_path = data.source_path
 
-			var tilemap = TileMap.new()
-			tilemap.set_name(layer.name)
-			tilemap.cell_size = cell_size
-			tilemap.self_modulate = Color(1.0, 1.0, 1.0, opacity);
-			tilemap.visible = visible
-			tilemap.mode = map_mode
-			tilemap.cell_clip_uv = options.uv_clip
+	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
+	var visible = bool(layer.visible) if "visible" in layer else true
 
-			var offset = Vector2()
-			if "offsetx" in layer:
-				offset.x = int(layer.offsetx)
-			if "offsety" in layer:
-				offset.y = int(layer.offsety)
+	if layer.type == "tilelayer":
+		var layer_data = layer.data
 
-			tilemap.position = offset
-			tilemap.tile_set = tileset
-
-			var count = 0
-			for tile_id in layer_data:
-				var int_id = int(str(tile_id)) & 0xFFFFFFFF
-
-				if int_id == 0:
-					count += 1
-					continue
-
-				var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
-				var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
-				var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
-
-				var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
-
-				var cell_pos = Vector2(count % int(map_size.x), int(count / map_size.x))
-				tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
-
-				count += 1
-
-			if options.custom_properties:
-				set_custom_properties(tilemap, layer)
-
-			root.add_child(tilemap)
-			tilemap.set_owner(root)
-		elif layer.type == "imagelayer":
-			var image = null
-			if layer.image != "":
-				image = load_image(layer.image, source_path, options)
-				if typeof(image) != TYPE_OBJECT:
+		if "encoding" in layer and layer.encoding == "base64":
+			if "compression" in layer:
+				layer_data = decompress_layer(layer_data, layer.compression, map_size)
+				if typeof(layer_data) == TYPE_INT:
 					# Error happened
-					return image
+					return layer_data
+			else:
+				layer_data = read_base64_layer(layer_data)
 
-			var pos = Vector2()
-			var offset = Vector2()
+		var tilemap = TileMap.new()
+		tilemap.set_name(layer.name)
+		tilemap.cell_size = cell_size
+		tilemap.self_modulate = Color(1.0, 1.0, 1.0, opacity);
+		tilemap.visible = visible
+		tilemap.mode = map_mode
+		tilemap.cell_clip_uv = options.uv_clip
 
-			if "x" in layer:
-				pos.x = float(layer.x)
-			if "y" in layer:
-				pos.y = float(layer.y)
-			if "offsetx" in layer:
-				offset.x = float(layer.offsetx)
-			if "offsety" in layer:
-				offset.y = float(layer.offsety)
+		var offset = Vector2()
+		if "offsetx" in layer:
+			offset.x = int(layer.offsetx)
+		if "offsety" in layer:
+			offset.y = int(layer.offsety)
 
-			var sprite = Sprite.new()
-			sprite.set_name(layer.name)
-			sprite.centered = false
-			sprite.texture = image
-			sprite.visible = visible
-			sprite.self_modulate = Color(1.0, 1.0, 1.0, opacity)
-			if options.custom_properties:
-				set_custom_properties(sprite, layer)
-			root.add_child(sprite)
-			sprite.position = pos + offset
-			sprite.set_owner(root)
-		elif layer.type == "objectgroup":
-			var object_layer = Node2D.new()
-			if options.custom_properties:
-				set_custom_properties(object_layer, layer)
-			root.add_child(object_layer)
-			object_layer.set_owner(root)
-			if "name" in layer and not layer.name.empty():
-				object_layer.set_name(layer.name)
-			for object in layer.objects:
-				if "point" in object and object.point:
-					var point = Position2D.new()
-					if not "x" in object or not "y" in object:
-						printerr("Missing coordinates for point in object layer.")
-						continue
-					point.position = Vector2(float(object.x), float(object.y))
-					point.visible = bool(object.visible) if "visible" in object else true
-					object_layer.add_child(point)
-					point.set_owner(root)
-					if "name" in object and not str(object.name).empty():
-						point.set_name(str(object.name))
-					elif "id" in object and not str(object.id).empty():
-						point.set_name(str(object.id))
-					if options.custom_properties:
-						set_custom_properties(point, object)
+		tilemap.position = offset
+		tilemap.tile_set = tileset
 
-				elif not "gid" in object:
-					# Not a tile object
-					if "type" in object and object.type == "navigation":
-						# Can't make navigation objects right now
-						printerr("Navigation polygons aren't supported in an object layer.")
-						continue # Non-fatal error
-					var shape = shape_from_object(object)
+		var count = 0
+		for tile_id in layer_data:
+			var int_id = int(str(tile_id)) & 0xFFFFFFFF
 
-					if typeof(shape) != TYPE_OBJECT:
-						# Error happened
-						return shape
+			if int_id == 0:
+				count += 1
+				continue
 
-					if "type" in object and object.type == "occluder":
-						var occluder = LightOccluder2D.new()
-						var pos = Vector2()
-						var rot = 0
+			var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
+			var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
+			var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
 
-						if "x" in object:
-							pos.x = float(object.x)
-						if "y" in object:
-							pos.y = float(object.y)
-						if "rotation" in object:
-							rot = float(object.rotation)
+			var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 
-						occluder.visible = bool(object.visible) if "visible" in object else true
-						occluder.position = pos
-						occluder.rotation_degrees = rot
-						occluder.occluder = shape
-						if "name" in object and not str(object.name).empty():
-							occluder.set_name(str(object.name))
-						elif "id" in object and not str(object.id).empty():
-							occluder.set_name(str(object.id))
+			var cell_pos = Vector2(count % int(map_size.x), int(count / map_size.x))
+			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
 
-						if options.custom_properties:
-							set_custom_properties(occluder, object)
+			count += 1
 
-						object_layer.add_child(occluder)
-						occluder.set_owner(root)
+		if options.custom_properties:
+			set_custom_properties(tilemap, layer)
 
-					else:
-						var body = StaticBody2D.new()
+		parent.add_child(tilemap)
+		tilemap.set_owner(root)
+	elif layer.type == "imagelayer":
+		var image = null
+		if layer.image != "":
+			image = load_image(layer.image, source_path, options)
+			if typeof(image) != TYPE_OBJECT:
+				# Error happened
+				return image
 
-						var offset = Vector2()
-						var collision
-						var pos = Vector2()
-						var rot = 0
+		var pos = Vector2()
+		var offset = Vector2()
 
-						if not ("polygon" in object or "polyline" in object):
-							# Regular shape
-							collision = CollisionShape2D.new()
-							collision.shape = shape
-							if shape is RectangleShape2D:
-								offset = shape.extents
-							elif shape is CircleShape2D:
-								offset = Vector2(shape.radius, shape.radius)
-							elif shape is CapsuleShape2D:
-								offset = Vector2(shape.radius, shape.height)
-								if shape.radius > shape.height:
-									var temp = shape.radius
-									shape.radius = shape.height
-									shape.height = temp
-									collision.rotation_degrees = 90
-								shape.height *= 2
-							collision.position = offset
-						else:
-							collision = CollisionPolygon2D.new()
-							var points = null
-							if shape is ConcavePolygonShape2D:
-								points = []
-								var segments = shape.segments
-								for i in range(0, segments.size()):
-									if i % 2 != 0:
-										continue
-									points.push_back(segments[i])
-								collision.build_mode = CollisionPolygon2D.BUILD_SEGMENTS
-							else:
-								points = shape.points
-								collision.build_mode = CollisionPolygon2D.BUILD_SOLIDS
-							collision.polygon = points
+		if "x" in layer:
+			pos.x = float(layer.x)
+		if "y" in layer:
+			pos.y = float(layer.y)
+		if "offsetx" in layer:
+			offset.x = float(layer.offsetx)
+		if "offsety" in layer:
+			offset.y = float(layer.offsety)
 
-						if "x" in object:
-							pos.x = float(object.x)
-						if "y" in object:
-							pos.y = float(object.y)
-						if "rotation" in object:
-							rot = float(object.rotation)
+		var sprite = Sprite.new()
+		sprite.set_name(layer.name)
+		sprite.centered = false
+		sprite.texture = image
+		sprite.visible = visible
+		sprite.self_modulate = Color(1.0, 1.0, 1.0, opacity)
+		if options.custom_properties:
+			set_custom_properties(sprite, layer)
+		parent.add_child(sprite)
+		sprite.position = pos + offset
+		sprite.set_owner(root)
+	elif layer.type == "objectgroup":
+		var object_layer = Node2D.new()
+		if options.custom_properties:
+			set_custom_properties(object_layer, layer)
+		parent.add_child(object_layer)
+		object_layer.set_owner(root)
+		if "name" in layer and not layer.name.empty():
+			object_layer.set_name(layer.name)
+		for object in layer.objects:
+			if "point" in object and object.point:
+				var point = Position2D.new()
+				if not "x" in object or not "y" in object:
+					printerr("Missing coordinates for point in object layer.")
+					continue
+				point.position = Vector2(float(object.x), float(object.y))
+				point.visible = bool(object.visible) if "visible" in object else true
+				object_layer.add_child(point)
+				point.set_owner(root)
+				if "name" in object and not str(object.name).empty():
+					point.set_name(str(object.name))
+				elif "id" in object and not str(object.id).empty():
+					point.set_name(str(object.id))
+				if options.custom_properties:
+					set_custom_properties(point, object)
 
-						object_layer.add_child(body)
-						body.set_owner(root)
-						body.add_child(collision)
-						collision.set_owner(root)
+			elif not "gid" in object:
+				# Not a tile object
+				if "type" in object and object.type == "navigation":
+					# Can't make navigation objects right now
+					printerr("Navigation polygons aren't supported in an object layer.")
+					continue # Non-fatal error
+				var shape = shape_from_object(object)
 
-						if options.custom_properties:
-							set_custom_properties(body, object)
+				if typeof(shape) != TYPE_OBJECT:
+					# Error happened
+					return shape
 
-						if "name" in object and not str(object.name).empty():
-							body.set_name(str(object.name))
-						elif "id" in object and not str(object.id).empty():
-							body.set_name(str(object.id))
-						body.visible = bool(object.visible) if "visible" in object else true
-						body.position = pos
-						body.rotation_degrees = rot
-
-				else: # "gid" in object
-					var tile_raw_id = int(str(object.gid)) & 0xFFFFFFFF
-					var tile_id = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
-
-					var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
-					var sprite = Sprite.new()
+				if "type" in object and object.type == "occluder":
+					var occluder = LightOccluder2D.new()
 					var pos = Vector2()
 					var rot = 0
-					sprite.texture = tileset.tile_get_texture(tile_id)
-
-					if not is_tile_object:
-						sprite.region_enabled = true
-						sprite.region_rect = tileset.tile_get_region(tile_id)
-
-					if "name" in object and not str(object.name).empty():
-						sprite.set_name(str(object.name))
-					elif "id" in object and not str(object.id).empty():
-						sprite.set_name(str(object.id))
-
-					sprite.flip_h = bool(tile_id & FLIPPED_HORIZONTALLY_FLAG)
-					sprite.flip_v = bool(tile_id & FLIPPED_VERTICALLY_FLAG)
 
 					if "x" in object:
 						pos.x = float(object.x)
@@ -315,29 +231,160 @@ func build(source_path, options):
 					if "rotation" in object:
 						rot = float(object.rotation)
 
-					if is_tile_object:
-						# Tile object positions are oriented bottom left.
-						# If we import their positioning data as is, their position ends up skewed incorrectly.
-						pos.x = pos.x + float(object.width) / 2
-						pos.y = pos.y - float(object.height) / 2
-
-					sprite.position = pos
-					sprite.rotation_degrees = rot
-					sprite.visible = bool(object.visible) if "visible" in object else true
-					sprite.region_filter_clip = options.uv_clip
-
-					object_layer.add_child(sprite)
-					sprite.set_owner(root)
+					occluder.visible = bool(object.visible) if "visible" in object else true
+					occluder.position = pos
+					occluder.rotation_degrees = rot
+					occluder.occluder = shape
+					if "name" in object and not str(object.name).empty():
+						occluder.set_name(str(object.name))
+					elif "id" in object and not str(object.id).empty():
+						occluder.set_name(str(object.id))
 
 					if options.custom_properties:
-						set_custom_properties(sprite, object)
+						set_custom_properties(occluder, object)
 
-		else:
-			printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
+					object_layer.add_child(occluder)
+					occluder.set_owner(root)
 
-	return root
+				else:
+					var body = StaticBody2D.new()
 
-# Make a tileset from a array of tilesets data
+					var offset = Vector2()
+					var collision
+					var pos = Vector2()
+					var rot = 0
+
+					if not ("polygon" in object or "polyline" in object):
+						# Regular shape
+						collision = CollisionShape2D.new()
+						collision.shape = shape
+						if shape is RectangleShape2D:
+							offset = shape.extents
+						elif shape is CircleShape2D:
+							offset = Vector2(shape.radius, shape.radius)
+						elif shape is CapsuleShape2D:
+							offset = Vector2(shape.radius, shape.height)
+							if shape.radius > shape.height:
+								var temp = shape.radius
+								shape.radius = shape.height
+								shape.height = temp
+								collision.rotation_degrees = 90
+							shape.height *= 2
+						collision.position = offset
+					else:
+						collision = CollisionPolygon2D.new()
+						var points = null
+						if shape is ConcavePolygonShape2D:
+							points = []
+							var segments = shape.segments
+							for i in range(0, segments.size()):
+								if i % 2 != 0:
+									continue
+								points.push_back(segments[i])
+							collision.build_mode = CollisionPolygon2D.BUILD_SEGMENTS
+						else:
+							points = shape.points
+							collision.build_mode = CollisionPolygon2D.BUILD_SOLIDS
+						collision.polygon = points
+
+					if "x" in object:
+						pos.x = float(object.x)
+					if "y" in object:
+						pos.y = float(object.y)
+					if "rotation" in object:
+						rot = float(object.rotation)
+
+					object_layer.add_child(body)
+					body.set_owner(root)
+					body.add_child(collision)
+					collision.set_owner(root)
+
+					if options.custom_properties:
+						set_custom_properties(body, object)
+
+					if "name" in object and not str(object.name).empty():
+						body.set_name(str(object.name))
+					elif "id" in object and not str(object.id).empty():
+						body.set_name(str(object.id))
+					body.visible = bool(object.visible) if "visible" in object else true
+					body.position = pos
+					body.rotation_degrees = rot
+
+			else: # "gid" in object
+				var tile_raw_id = int(str(object.gid)) & 0xFFFFFFFF
+				var tile_id = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+
+				var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
+				var sprite = Sprite.new()
+				var pos = Vector2()
+				var rot = 0
+				sprite.texture = tileset.tile_get_texture(tile_id)
+
+				if not is_tile_object:
+					sprite.region_enabled = true
+					sprite.region_rect = tileset.tile_get_region(tile_id)
+
+				if "name" in object and not str(object.name).empty():
+					sprite.set_name(str(object.name))
+				elif "id" in object and not str(object.id).empty():
+					sprite.set_name(str(object.id))
+
+				sprite.flip_h = bool(tile_id & FLIPPED_HORIZONTALLY_FLAG)
+				sprite.flip_v = bool(tile_id & FLIPPED_VERTICALLY_FLAG)
+
+				if "x" in object:
+					pos.x = float(object.x)
+				if "y" in object:
+					pos.y = float(object.y)
+				if "rotation" in object:
+					rot = float(object.rotation)
+
+				if is_tile_object:
+					# Tile object positions are oriented bottom left.
+					# If we import their positioning data as is, their position ends up skewed incorrectly.
+					pos.x = pos.x + float(object.width) / 2
+					pos.y = pos.y - float(object.height) / 2
+
+				sprite.position = pos
+				sprite.rotation_degrees = rot
+				sprite.visible = bool(object.visible) if "visible" in object else true
+				sprite.region_filter_clip = options.uv_clip
+
+				object_layer.add_child(sprite)
+				sprite.set_owner(root)
+
+				if options.custom_properties:
+					set_custom_properties(sprite, object)
+	elif layer.type == "group":
+		var group = Node2D.new()
+		var pos = Vector2()
+		if "x" in layer:
+			pos.x = float(layer.x)
+		if "y" in layer:
+			pos.y = float(layer.y)
+		group.modulate = Color(1, 1, 1, opacity)
+		group.visible = visible
+		group.position = pos
+
+		if options.custom_properties:
+			set_custom_properties(group, layer)
+
+		if "name" in layer and not str(layer.name).empty():
+			group.set_name(str(layer.name))
+
+		parent.add_child(group)
+		group.set_owner(root)
+
+		for sub_layer in layer.layers:
+			make_layer(sub_layer, group, root, data)
+
+	else:
+		printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
+		return ERR_INVALID_DATA
+
+	return OK
+
+# Makes a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
 func build_tileset(tilesets, source_path, options):
 	var result = TileSet.new()
@@ -345,20 +392,23 @@ func build_tileset(tilesets, source_path, options):
 
 	for tileset in tilesets:
 		var ts = tileset
+		var ts_source_path = source_path
 		if "source" in ts:
 			if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
 				printerr("Missing or invalid firstgid tileset property.")
 				return ERR_INVALID_DATA
 
+			ts_source_path = source_path.get_base_dir().plus_file(ts.source)
+
 			if ts.source.get_extension().to_lower() == "tsx":
 				var tsx_reader = TiledXMLToDictionary.new()
-				ts = tsx_reader.read_tsx(source_path.get_base_dir().plus_file(ts.source))
+				ts = tsx_reader.read_tsx(ts_source_path)
 				if typeof(ts) != TYPE_DICTIONARY:
 					# Error happened
 					return ts
 			else: # JSON Tileset
 				var f = File.new()
-				err = f.open(source_path.get_base_dir().plus_file(ts.source), File.READ)
+				err = f.open(ts_source_path, File.READ)
 				if err != OK:
 					printerr("Error opening tileset '%s'." % [ts.source])
 					return err
@@ -389,7 +439,7 @@ func build_tileset(tilesets, source_path, options):
 		var imagesize = Vector2()
 
 		if has_global_image:
-			image = load_image(ts.image, source_path, options)
+			image = load_image(ts.image, ts_source_path, options)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
 				return image
@@ -420,7 +470,7 @@ func build_tileset(tilesets, source_path, options):
 				continue
 			else:
 				var image_path = ts.tiles[rel_id].image
-				image = load_image(image_path, source_path, options)
+				image = load_image(image_path, ts_source_path, options)
 				if typeof(image) != TYPE_OBJECT:
 					# Error happened
 					return image
@@ -768,5 +818,9 @@ func validate_layer(layer):
 	elif layer.type == "objectgroup":
 		if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
 			printerr("Missing or invalid objects array for layer.")
+			return ERR_INVALID_DATA
+	elif layer.type == "group":
+		if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
+			printerr("Missing or invalid layer array for group layer.")
 			return ERR_INVALID_DATA
 	return OK

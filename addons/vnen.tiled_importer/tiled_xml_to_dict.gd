@@ -368,6 +368,7 @@ func parse_image_layer(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
 	data.type = "imagelayer"
+	data.image = ""
 
 	if not parser.is_empty():
 		err = parser.read()
@@ -399,7 +400,57 @@ func parse_image_layer(parser):
 # Parses a group layer from the XML and return a dictionary
 # Returns an error code if fails
 func parse_group_layer(parser):
-	return {}
+	var err = OK
+	var result = attributes_to_dict(parser)
+	result.type = "group"
+	result.layers = []
+
+	if not parser.is_empty():
+		err = parser.read()
+
+		while err == OK:
+			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+				if parser.get_node_name().to_lower() == "group":
+					break
+			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+				if parser.get_node_name() == "layer":
+					var layer = parse_tile_layer(parser)
+					if typeof(layer) != TYPE_DICTIONARY:
+						printerr("Error parsing TMX file. Invalid tile layer data (around line %i)." % [parser.get_current_line()])
+						return ERR_INVALID_DATA
+					result.layers.push_back(layer)
+
+				elif parser.get_node_name() == "imagelayer":
+					var layer = parse_image_layer(parser)
+					if typeof(layer) != TYPE_DICTIONARY:
+						printerr("Error parsing TMX file. Invalid image layer data (around line %i)." % [parser.get_current_line()])
+						return ERR_INVALID_DATA
+					result.layers.push_back(layer)
+
+				elif parser.get_node_name() == "objectgroup":
+					var layer = parse_object_layer(parser)
+					if typeof(layer) != TYPE_DICTIONARY:
+						printerr("Error parsing TMX file. Invalid object layer data (around line %i)." % [parser.get_current_line()])
+						return ERR_INVALID_DATA
+					result.layers.push_back(layer)
+
+				elif parser.get_node_name() == "group":
+					var layer = parse_group_layer(parser)
+					if typeof(layer) != TYPE_DICTIONARY:
+						printerr("Error parsing TMX file. Invalid group layer data (around line %i)." % [parser.get_current_line()])
+						return ERR_INVALID_DATA
+					result.layers.push_back(layer)
+
+				elif parser.get_node_name() == "properties":
+					var prop_data = parse_properties(parser)
+					if typeof(prop_data) == TYPE_STRING:
+						return prop_data
+
+					result.properties = prop_data.properties
+					result.propertytypes = prop_data.propertytypes
+
+			err = parser.read()
+	return result
 
 # Parses properties data from the XML and return a dictionary
 # Returns an error code if fails
