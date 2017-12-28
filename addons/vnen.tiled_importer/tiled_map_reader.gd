@@ -127,7 +127,7 @@ func build(source_path, options):
 		elif layer.type == "imagelayer":
 			var image = null
 			if layer.image != "":
-				image = load_image(layer.image, source_path, options.image_flags)
+				image = load_image(layer.image, source_path, options)
 				if typeof(image) != TYPE_OBJECT:
 					# Error happened
 					return image
@@ -354,7 +354,7 @@ func build_tileset(tilesets, source_path, options):
 		var imagesize = Vector2()
 
 		if has_global_image:
-			image = load_image(ts.image, source_path, options.image_flags)
+			image = load_image(ts.image, source_path, options)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
 				return image
@@ -385,7 +385,7 @@ func build_tileset(tilesets, source_path, options):
 				continue
 			else:
 				var image_path = ts.tiles[rel_id].image
-				image = load_image(image_path, source_path, options.image_flags)
+				image = load_image(image_path, source_path, options)
 				if typeof(image) != TYPE_OBJECT:
 					# Error happened
 					return image
@@ -428,20 +428,34 @@ func build_tileset(tilesets, source_path, options):
 
 # Loads an image from a given path
 # Returns a Texture
-func load_image(rel_path, source_path, flags = Texture.FLAGS_DEFAULT):
+func load_image(rel_path, source_path, options):
+	var flags = options.image_flags if "image_flags" in options else Texture.FLAGS_DEFAULT
+	var embed = options.embed_internal_images if "embed_internal_images" in options else false
+
 	var ext = rel_path.get_extension().to_lower()
 	if ext != "png" and ext != "jpg":
 		printerr("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
 		return ERR_FILE_UNRECOGNIZED
 
 	var total_path = rel_path if rel_path.is_abs_path() else source_path.get_base_dir().plus_file(rel_path)
+	total_path = ProjectSettings.localize_path(total_path)
+
 	var dir = Directory.new()
 	if not dir.file_exists(total_path):
 		printerr("Image not found: %s" % [total_path])
 		return ERR_FILE_NOT_FOUND
 
-	var image = ImageTexture.new()
-	image.load(total_path)
+	if not total_path.begins_with("res://"):
+		# External images need to be embedded
+		embed = true
+
+	var image = ERR_FILE_CANT_READ
+	if embed:
+		image = ImageTexture.new()
+		image.load(total_path)
+	else:
+		image = load(total_path)
+
 	image.set_flags(flags)
 
 	return image
