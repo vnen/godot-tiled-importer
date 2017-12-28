@@ -534,14 +534,15 @@ func load_image(rel_path, source_path, options):
 		# External images need to be embedded
 		embed = true
 
-	var image = ERR_FILE_CANT_READ
+	var image = null
 	if embed:
 		image = ImageTexture.new()
 		image.load(total_path)
 	else:
-		image = load(total_path)
+		image = ResourceLoader.load(total_path, "ImageTexture")
 
-	image.set_flags(flags)
+	if image != null:
+		image.set_flags(flags)
 
 	return image
 

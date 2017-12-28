@@ -162,8 +162,10 @@ func parse_tileset(parser):
 					printerr("Error loading image tag. No source attribute found (around line %i)." % [parser.get_current_line()])
 					return ERR_INVALID_DATA
 				data.image = attr.source
-				data.imagewidth = attr.width
-				data.imageheight = attr.height
+				if "width" in attr:
+					data.imagewidth = attr.width
+				if "height" in attr:
+					data.imageheight = attr.height
 
 			elif parser.get_node_name() == "properties":
 				var prop_data = parse_properties(parser)
