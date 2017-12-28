@@ -29,6 +29,9 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
+# XML Format reader
+const TiledXMLToDictionary = preload("tiled_xml_to_dict.gd")
+
 # Polygon vertices sorter
 const PolygonSorter = preload("polygon_sorter.gd")
 
@@ -488,6 +491,16 @@ func load_image(rel_path, source_path, options):
 # Reads a file and returns its contents as a dictionary
 # Returns an error code if fails
 func read_file(path):
+	if path.get_extension().to_lower() == "tmx":
+		var tmx_to_dict = TiledXMLToDictionary.new()
+		var data = tmx_to_dict.read_tmx(path)
+		if typeof(data) != TYPE_DICTIONARY:
+			# Error happened
+			printerr("Error parsing map file '%s'." % [path])
+		# Return error or result
+		return data
+
+	# Not TMX, must be JSON
 	var file = File.new()
 	var err = file.open(path, File.READ)
 	if err != OK:

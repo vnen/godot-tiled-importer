@@ -23,7 +23,7 @@
 tool
 extends EditorImportPlugin
 
-var TiledMapReader = preload("tiled_map_reader.gd")
+const TiledMapReader = preload("tiled_map_reader.gd")
 
 func get_importer_name():
 	return "vnen.tiled_importer"
