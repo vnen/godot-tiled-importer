@@ -29,7 +29,7 @@ func get_importer_name():
 	return "vnen.tiled_importer"
 
 func get_visible_name():
-	return "Scene"
+	return "Scene from Tiled"
 
 func get_recognized_extensions():
 	return ["json", "tmx"]

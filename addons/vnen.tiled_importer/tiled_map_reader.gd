@@ -338,9 +338,34 @@ func build(source_path, options):
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
 func build_tileset(tilesets, source_path, options):
 	var result = TileSet.new()
+	var err = ERR_INVALID_DATA
 
-	for ts in tilesets:
-		var err = validate_tileset(ts)
+	for tileset in tilesets:
+		var ts = tileset
+		if "source" in ts:
+			if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
+				printerr("Missing or invalid firstgid tileset property.")
+				return ERR_INVALID_DATA
+
+			var f = File.new()
+			err = f.open(source_path.get_base_dir().plus_file(ts.source), File.READ)
+			if err != OK:
+				printerr("Error opening tileset '%s'." % [ts.source])
+				return err
+
+			var json_res = JSON.parse(f.get_as_text())
+			if json_res.error != OK:
+				printerr("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
+				return ERR_INVALID_DATA
+
+			ts = json_res.result
+			if typeof(ts) != TYPE_DICTIONARY:
+				printerr("Tileset '%s' is not a dictionary." % [ts.source])
+				return ERR_INVALID_DATA
+
+			ts.firstgid = tileset.firstgid
+
+		err = validate_tileset(ts)
 		if err != OK:
 			return err
 
