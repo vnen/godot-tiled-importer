@@ -83,7 +83,6 @@ func get_option_visibility(option, options):
 	return true
 
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
-	print(source_file, options)
 	var map_reader = TiledMapReader.new()
 
 	var scene = map_reader.build(source_file, options)

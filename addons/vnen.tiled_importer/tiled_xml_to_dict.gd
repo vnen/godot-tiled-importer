@@ -261,7 +261,7 @@ func parse_object(parser):
 
 				elif parser.get_node_name() == "polygon" or parser.get_node_name() == "polyline":
 					var points = []
-					var points_raw = parser.get_named_attribute_value("points").split(" ")
+					var points_raw = parser.get_named_attribute_value("points").split(" ", false, 0)
 
 					for pr in points_raw:
 						points.push_back({
