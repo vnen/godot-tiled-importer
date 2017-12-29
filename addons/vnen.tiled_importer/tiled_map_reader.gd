@@ -51,10 +51,23 @@ func build(source_path, options):
 	var map_size = Vector2(int(map.width), int(map.height))
 	var cell_size = Vector2(int(map.tilewidth), int(map.tileheight))
 	var map_mode = TileMap.MODE_SQUARE
+	var map_offset = TileMap.HALF_OFFSET_DISABLED
+	var map_pos_offset = Vector2()
 	if "orientation" in map:
 		match map.orientation:
-			"isometric": map_mode = TileMap.MODE_ISOMETRIC
-			# TODO: staggered and hexagonal orientations
+			"isometric":
+				map_mode = TileMap.MODE_ISOMETRIC
+			"staggered":
+				map_pos_offset.y -= cell_size.y / 2
+				match map.staggeraxis:
+					"x":
+						map_offset = TileMap.HALF_OFFSET_Y
+						cell_size.x /= 2.0
+					"y":
+						map_offset = TileMap.HALF_OFFSET_X
+						cell_size.y /= 2.0
+
+			# TODO: hexagonal orientation
 
 	var tileset = build_tileset(map.tilesets, source_path, options)
 	if typeof(tileset) != TYPE_OBJECT:
@@ -70,6 +83,8 @@ func build(source_path, options):
 		"options": options,
 		"map_size": map_size,
 		"map_mode": map_mode,
+		"map_offset": map_offset,
+		"map_pos_offset": map_pos_offset,
 		"cell_size": cell_size,
 		"tileset": tileset,
 		"source_path": source_path
@@ -90,6 +105,8 @@ func make_layer(layer, parent, root, data):
 	# Main map data
 	var map_size = data.map_size
 	var map_mode = data.map_mode
+	var map_offset = data.map_offset
+	var map_pos_offset = data.map_pos_offset
 	var cell_size = data.cell_size
 	var options = data.options
 	var tileset = data.tileset
@@ -116,7 +133,9 @@ func make_layer(layer, parent, root, data):
 		tilemap.modulate = Color(1.0, 1.0, 1.0, opacity);
 		tilemap.visible = visible
 		tilemap.mode = map_mode
+		tilemap.cell_half_offset = map_offset
 		tilemap.cell_clip_uv = options.uv_clip
+		tilemap.cell_y_sort = true
 
 		var offset = Vector2()
 		if "offsetx" in layer:
@@ -124,7 +143,7 @@ func make_layer(layer, parent, root, data):
 		if "offsety" in layer:
 			offset.y = int(layer.offsety)
 
-		tilemap.position = offset
+		tilemap.position = offset + map_pos_offset
 		tilemap.tile_set = tileset
 
 		var count = 0
@@ -775,6 +794,13 @@ func validate_map(map):
 	elif not "tilesets" in map or typeof(map.tilesets) != TYPE_ARRAY:
 		printerr("Missing or invalid tilesets property.")
 		return ERR_INVALID_DATA
+	elif "orientation" in map and (map.orientation == "staggered" or map.orientation == "hexagonal"):
+		if not "staggeraxis" in map:
+			printerr("Missing stagger axis property.")
+			return ERR_INVALID_DATA
+		elif not "staggerindex" in map:
+			printerr("Missing stagger axis property.")
+			return ERR_INVALID_DATA
 	return OK
 
 # Validates the tileset dictionary content for missing or invalid keys
