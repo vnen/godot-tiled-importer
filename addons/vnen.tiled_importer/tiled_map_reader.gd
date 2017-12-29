@@ -113,7 +113,7 @@ func make_layer(layer, parent, root, data):
 		var tilemap = TileMap.new()
 		tilemap.set_name(layer.name)
 		tilemap.cell_size = cell_size
-		tilemap.self_modulate = Color(1.0, 1.0, 1.0, opacity);
+		tilemap.modulate = Color(1.0, 1.0, 1.0, opacity);
 		tilemap.visible = visible
 		tilemap.mode = map_mode
 		tilemap.cell_clip_uv = options.uv_clip
@@ -176,7 +176,7 @@ func make_layer(layer, parent, root, data):
 		sprite.centered = false
 		sprite.texture = image
 		sprite.visible = visible
-		sprite.self_modulate = Color(1.0, 1.0, 1.0, opacity)
+		sprite.modulate = Color(1.0, 1.0, 1.0, opacity)
 		if options.custom_properties:
 			set_custom_properties(sprite, layer)
 		parent.add_child(sprite)
@@ -186,10 +186,16 @@ func make_layer(layer, parent, root, data):
 		var object_layer = Node2D.new()
 		if options.custom_properties:
 			set_custom_properties(object_layer, layer)
+		object_layer.modulate = Color(1.0, 1.0, 1.0, opacity)
+		object_layer.visible = visible
 		parent.add_child(object_layer)
 		object_layer.set_owner(root)
 		if "name" in layer and not layer.name.empty():
 			object_layer.set_name(layer.name)
+
+		if not "draworder" in layer or layer.draworder == "topdown":
+			layer.objects.sort_custom(self, "object_sorter")
+
 		for object in layer.objects:
 			if "point" in object and object.point:
 				var point = Position2D.new()
@@ -318,7 +324,9 @@ func make_layer(layer, parent, root, data):
 				var sprite = Sprite.new()
 				var pos = Vector2()
 				var rot = 0
+				var scale = Vector2(1, 1)
 				sprite.texture = tileset.tile_get_texture(tile_id)
+				var texture_size = sprite.texture.get_size()
 
 				if not is_tile_object:
 					sprite.region_enabled = true
@@ -329,8 +337,8 @@ func make_layer(layer, parent, root, data):
 				elif "id" in object and not str(object.id).empty():
 					sprite.set_name(str(object.id))
 
-				sprite.flip_h = bool(tile_id & FLIPPED_HORIZONTALLY_FLAG)
-				sprite.flip_v = bool(tile_id & FLIPPED_VERTICALLY_FLAG)
+				sprite.flip_h = bool(tile_raw_id & FLIPPED_HORIZONTALLY_FLAG)
+				sprite.flip_v = bool(tile_raw_id & FLIPPED_VERTICALLY_FLAG)
 
 				if "x" in object:
 					pos.x = float(object.x)
@@ -338,17 +346,19 @@ func make_layer(layer, parent, root, data):
 					pos.y = float(object.y)
 				if "rotation" in object:
 					rot = float(object.rotation)
-
-				if is_tile_object:
-					# Tile object positions are oriented bottom left.
-					# If we import their positioning data as is, their position ends up skewed incorrectly.
-					pos.x = pos.x + float(object.width) / 2
-					pos.y = pos.y - float(object.height) / 2
+				if "width" in object and float(object.width) != texture_size.x:
+					scale.x = float(object.width) / texture_size.x
+				if "height" in object and float(object.height) != texture_size.y:
+					scale.y = float(object.height) / texture_size.y
 
 				sprite.position = pos
 				sprite.rotation_degrees = rot
 				sprite.visible = bool(object.visible) if "visible" in object else true
 				sprite.region_filter_clip = options.uv_clip
+				sprite.scale = scale
+				# Translate from Tiled bottom-left position to Godot top-left
+				sprite.centered = false
+				sprite.offset = Vector2(0, -texture_size.y)
 
 				object_layer.add_child(sprite)
 				sprite.set_owner(root)
@@ -362,7 +372,7 @@ func make_layer(layer, parent, root, data):
 			pos.x = float(layer.x)
 		if "y" in layer:
 			pos.y = float(layer.y)
-		group.modulate = Color(1, 1, 1, opacity)
+		group.modulate = Color(1.0, 1.0, 1.0, opacity)
 		group.visible = visible
 		group.position = pos
 
@@ -730,6 +740,13 @@ func set_custom_properties(object, tiled_object):
 		else:
 			value = str(properties[property])
 		object.set_meta(property, value)
+
+# Custom function to sort objects in an object layer
+# This is done to support the "topdown" draw order, which sorts by 'y' coordinate
+func object_sorter(first, second):
+	if first.y == second.y:
+		return first.id < second.id
+	return first.y < second.y
 
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code
