@@ -233,9 +233,9 @@ func build():
 						tileset.tile_set_shape(gid, shape)
 						tileset.tile_set_shape_offset(gid, offset)
 
-				if options.tile_metadata and "properties" in ts.tiles[rel_id].objectgroup \
-						and "propertytypes" in ts.tiles[rel_id].objectgroup:
-					var prop_dict = _get_properties(ts.tiles[rel_id].objectgroup.properties, ts.tiles[rel_id].objectgroup.propertytypes)
+			if options.tile_metadata and "tileproperties" in ts and "tilepropertytypes" in ts:
+				if rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
+					var prop_dict = _get_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
 					tile_meta[gid] = prop_dict
 
 			gid += 1
@@ -267,6 +267,7 @@ func build():
 				"firstgid": firstgid,
 				"tilecount": tilecount,
 				"tileset": tileset,
+				"lastgid": gid - 1
 			}
 
 	if options.single_tileset and not options.embed:
@@ -576,10 +577,12 @@ func build():
 					sprite.set_owner(scene)
 
 					if options.custom_properties:
-						var tile = _tile_from_gid(tile_raw_id)
+						var tileset_data = _tileset_data_from_gid(tile_raw_id)
 
-						if tile != null and tile.has("properties") and tile.has("propertytypes"):
-							_set_meta(sprite, tile.properties, tile.propertytypes)
+						if tileset_data != null and tileset_data.has("tileproperties") and tileset_data.has("tilepropertytypes"):
+							var tile_rel_id = str(tileid - tileset_data.firstgid)
+							if tileset_data.tileproperties.has(tile_rel_id) and tileset_data.tilepropertytypes.has(tile_rel_id):
+								_set_meta(sprite, tileset_data.tileproperties[tile_rel_id], tileset_data.tilepropertytypes[tile_rel_id])
 
 						if obj.has("properties") and obj.has("propertytypes"):
 							_set_meta(sprite, obj.properties, obj.propertytypes)
@@ -602,19 +605,30 @@ func _tileset_from_gid(gid):
 
 	for map_id in tile_id_mapping:
 		var map = tile_id_mapping[map_id]
-		if gid >= map.firstgid and gid < (map.firstgid + map.tilecount):
+		if gid >= map.firstgid and gid <= map.lastgid:
 			return map.tileset
 
 	return null
 
-# Get a tile based on the global tile id
-func _tile_from_gid(gid):
-	for tileset in data.tilesets:
-		if gid >= tileset.firstgid and gid < (tileset.firstgid + tileset.tilecount):
-			var rel_id = str(gid - tileset.firstgid)
-			return tileset.tiles[rel_id]
+# Get a tileset raw data based on the global tile id
+func _tileset_data_from_gid(gid):
+	if gid == 0: return null
 
-	return null
+	var prev_tileset = null
+
+	# Should be safe to sort since this is called after the tilesets are done
+	data.tilesets.sort_custom(self, "_sort_by_firstgid")
+
+	for tileset in data.tilesets:
+		if gid < tileset.firstgid:
+			break
+		prev_tileset = tileset
+
+	return prev_tileset
+
+# Function to sort tileses by firstgid
+func _sort_by_firstgid(first, second):
+	return first.firstgid < second.firstgid
 
 # Get a shape based on the object data
 func _shape_from_object(obj):
