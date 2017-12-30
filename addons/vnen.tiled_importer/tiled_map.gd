@@ -381,14 +381,16 @@ func build():
 			if l.has("offsety"):
 				offset.y = float(l.offsety)
 
-			var image_path = options.basedir.plus_file(l.image) if l.image.is_rel_path() else l.image
-			var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
-			var image = _load_image(image_path, target_dir, l.name + ".png")
+			if l.image != "":
+				var image_path = options.basedir.plus_file(l.image) if l.image.is_rel_path() else l.image
+				var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
+				var image = _load_image(image_path, target_dir, l.name + ".png")
 
-			if typeof(image) == TYPE_STRING:
-				return image
+				if typeof(image) == TYPE_STRING:
+					return image
 
-			sprite.set_texture(image)
+				sprite.set_texture(image)
+
 			sprite.set_opacity(opacity)
 			sprite.set_hidden(not visible)
 			scene.add_child(sprite)
