@@ -63,6 +63,7 @@ func import(path, metadata):
 		"keep_img": metadata.get_option("keep_img"),
 		"separate_img_dir": metadata.get_option("separate_img_dir"),
 		"custom_properties": metadata.get_option("custom_properties"),
+		"tile_metadata": metadata.get_option("tile_metadata"),
 		"post_script": str(metadata.get_option("post_script")).strip_edges(),
 		"target": path,
 	}

@@ -182,6 +182,7 @@ func build():
 				target_dir = options.target.get_base_dir().plus_file(options.rel_path)
 
 		var gid = firstgid
+		var tile_meta = {}
 
 		var x = margin
 		var y = margin
@@ -232,6 +233,11 @@ func build():
 						tileset.tile_set_shape(gid, shape)
 						tileset.tile_set_shape_offset(gid, offset)
 
+				if options.tile_metadata and "properties" in ts.tiles[rel_id].objectgroup \
+						and "propertytypes" in ts.tiles[rel_id].objectgroup:
+					var prop_dict = _get_properties(ts.tiles[rel_id].objectgroup.properties, ts.tiles[rel_id].objectgroup.propertytypes)
+					tile_meta[gid] = prop_dict
+
 			gid += 1
 			i += 1
 			x += int(tilesize.x) + spacing
@@ -241,6 +247,9 @@ func build():
 
 		if options.custom_properties and ts.has("properties") and ts.has("propertytypes"):
 			_set_meta(tileset, ts.properties, ts.propertytypes)
+
+		if options.tile_metadata and tile_meta.size() > 0:
+			tileset.set_meta("tile_meta", tile_meta)
 
 		tileset.set_name(name)
 
@@ -711,8 +720,15 @@ func _load_image(source_img, target_folder, filename, width = false, height = fa
 
 	return image
 
-# Parse the custom properties and set as meta of the objet
+# Parse the custom properties and set as meta of the object
 func _set_meta(obj, properties, types):
+	var prop_dict = _get_properties(properties, types)
+	for prop in prop_dict:
+		obj.set_meta(prop, prop_dict[prop])
+
+# Get the properties from a Tiled object and give a Godot dictionary in return
+func _get_properties(properties, types):
+	var result = {}
 	for prop in properties:
 		var value = null
 		if types[prop].to_lower() == "bool":
@@ -725,7 +741,8 @@ func _set_meta(obj, properties, types):
 			value = int(properties[prop])
 		else:
 			value = str(properties[prop])
-		obj.set_meta(prop, value)
+		result[prop] = value
+	return result
 
 # Read a .tmx file and build a dictionary in the same format as Tiled .json
 # This helps normalizing the data and using a single builder

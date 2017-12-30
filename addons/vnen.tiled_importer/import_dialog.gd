@@ -109,6 +109,13 @@ func _ready():
 			"type": TreeItem.CELL_MODE_CHECK,
 			"text": "On",
 			"default": true,
+		},
+		"tile_metadata": {
+			"name": "Tile Metadata",
+			"tooltip": "Whether to import the metadata from tiles into the TileSet resource.",
+			"type": TreeItem.CELL_MODE_CHECK,
+			"text": "On",
+			"default": false,
 		}
 	}
 
