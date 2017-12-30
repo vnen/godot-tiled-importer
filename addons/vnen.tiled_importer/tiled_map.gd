@@ -607,10 +607,23 @@ func _tileset_from_gid(gid):
 
 # Get a tile based on the global tile id
 func _tile_from_gid(gid):
+	if gid == 0: return null
+
+	# For tilesets that are a collcetion of images, there's no guarantee
+	# that IDs will be sequentially ordered (1, 2, 3, 4)
+	# They can, for instance be like this: (1, 2, 7, 9)
+	# Thus we cannot rely on gid >= map.firstgid && gid < map.firstgid + map.tilecount
+
+	var prev_tileset
+
 	for tileset in data.tilesets:
-		if gid >= tileset.firstgid and gid < (tileset.firstgid + tileset.tilecount):
-			var rel_id = str(gid - tileset.firstgid)
-			return tileset.tiles[rel_id]
+		if gid < tileset.firstgid:
+			break
+		prev_tileset = tileset
+
+	if prev_tileset != null:
+		var rel_id = str(gid - prev_tileset.firstgid)
+		return prev_tileset.tiles[rel_id]
 
 	return null
 
