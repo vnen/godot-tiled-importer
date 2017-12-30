@@ -629,18 +629,8 @@ func _shape_from_object(obj):
 			shape.set_polygon(vertices)
 			shape.set_closed("polygon" in obj)
 		else:
-			if _is_convex(vertices):
-				shape = ConvexPolygonShape2D.new()
-				vertices = _sort_points_cw(vertices)
-				shape.set_points(vertices)
-			else:
-				shape = ConcavePolygonShape2D.new()
-				var segments = [vertices[0]]
-				for x in range(1, vertices.size()):
-					segments.push_back(vertices[x])
-					segments.push_back(vertices[x])
-				segments.push_back(vertices[0])
-				shape.set_segments(segments)
+			shape = ConvexPolygonShape2D.new()
+			shape.set_points(vertices)
 
 	elif "ellipse" in obj:
 		if obj.type == "navigation" or obj.type == "occluder":
@@ -681,70 +671,6 @@ func _shape_from_object(obj):
 			shape.set_extents(size / 2)
 
 	return shape
-
-func _is_convex(polygon):
-	var size = polygon.size()
-	if size <= 3:
-		# Less than 3 verices can't be concave
-		return true
-
-	var cp = 0
-
-	for i in range(0, size + 2):
-		var p1 = polygon[(i + 0) % size]
-		var p2 = polygon[(i + 1) % size]
-		var p3 = polygon[(i + 2) % size]
-
-		var prev_cp = cp
-		cp = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x)
-		if i > 0 and sign(cp) != sign(prev_cp):
-			return false
-
-	return true
-
-# Sort the vertices of a convex polygon in clockwise order
-func _sort_points_cw(vertices):
-	vertices = Array(vertices)
-
-	var centroid = Vector2()
-	var size = vertices.size()
-
-	for i in range(0, size):
-		centroid += vertices[i]
-
-	centroid /= size
-
-	var sorter = PointSorter.new(centroid)
-	vertices.sort_custom(sorter, "is_less")
-
-	return Vector2Array(vertices)
-
-class PointSorter:
-	var center
-
-	func _init(c):
-		center = c
-
-	func is_less(a, b):
-		if a.x - center.x >= 0 and b.x - center.x < 0:
-			return false
-		elif a.x - center.x < 0 and b.x - center.x >= 0:
-			return true
-		elif a.x - center.x == 0 and b.x - center.x == 0:
-			if a.y - center.y >= 0 or b.y - center.y >= 0:
-				return a.y < b.y
-			return a.y > b.y
-
-		var det = (a.x - center.x) * (b.y - center.y) - (b.x - center.x) * (a.y - center.y)
-		if det > 0:
-			return true
-		elif det < 0:
-			return false
-
-		var d1 = (a - center).length_squared()
-		var d2 = (b - center).length_squared()
-
-		return d1 < d2
 
 func _parse_base64_layer(data):
 	var decoded = Marshalls.base64_to_raw(data)
