@@ -405,6 +405,9 @@ func build():
 			if typeof(l.objects) != TYPE_ARRAY:
 				return 'Invalid Tiled data: "objects" key on object layer is not an array.'
 
+			if not l.has("draworder") or l.draworder == "topdown":
+				l.objects.sort_custom(self, "_object_sorter")
+
 			var object = Node2D.new()
 
 			if options.custom_properties and l.has("properties") and l.has("propertytypes"):
@@ -653,6 +656,13 @@ func _tileset_data_from_gid(gid):
 # Function to sort tileses by firstgid
 func _sort_by_firstgid(first, second):
 	return first.firstgid < second.firstgid
+
+# Custom function to sort objects in an object layer
+# This is done to support the "topdown" draw order, which sorts by 'y' coordinate
+func _object_sorter(first, second):
+	if first.y == second.y:
+		return first.id < second.id
+	return first.y < second.y
 
 # Get a shape based on the object data
 func _shape_from_object(obj):
