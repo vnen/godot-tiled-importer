@@ -336,7 +336,7 @@ func build():
 			var count = 0
 			for tile_id in layer_data:
 
-				var int_id = int(tile_id)
+				var int_id = int(str(tile_id)) & 0xFFFFFFFF
 
 				if int_id == 0:
 					count += 1
@@ -417,13 +417,31 @@ func build():
 			object.set_owner(scene)
 
 			for obj in l.objects:
-				if not obj.has("gid"):
+				if obj.has("point") and obj.point:
+					if not obj.has("x") or not obj.has("y"):
+						printerr("Missing coordinates of point object. Skipping.")
+						continue
+					var point = Position2D.new()
+					point.set_pos(Vector2(float(obj.x), float(obj.y)))
+					point.set_hidden(not bool(obj.visible) if obj.has("visible") else false)
+					object.add_child(point)
+					point.set_owner(scene)
+					if obj.has("name") and not str(obj.name).empty():
+						point.set_name(str(obj.name))
+					elif obj.has("id") and not str(obj.id).empty():
+						point.set_name(str(obj.id))
+					if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
+						_set_meta(point, obj.properties, obj.propertytypes)
+
+				elif not obj.has("gid"):
 					if obj.type == "navigation":
-						return "Invalid shape in object layer."
+						printerr("Can't use navigation in object layer. Skipping.")
+						continue
 
 					var shape = _shape_from_object(obj)
 					if typeof(shape) == TYPE_STRING:
-						return shape
+						printerr(shape)
+						continue
 
 					if obj.type == "occluder":
 						var occluder = LightOccluder2D.new()
@@ -526,7 +544,7 @@ func build():
 						if options.custom_properties and obj.has("properties") and obj.has("propertytypes"):
 							_set_meta(body, obj.properties, obj.propertytypes)
 				else: # if obj.has("gid"):
-					var tile_raw_id = int(obj.gid)
+					var tile_raw_id = int(str(obj.gid)) & 0xFFFFFFFF
 					var tileid = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 					var tileset = _tileset_from_gid(tileid)
 
@@ -537,9 +555,14 @@ func build():
 					var sprite = Sprite.new()
 					sprite.set_texture(tileset.tile_get_texture(tileid))
 
-					if not is_tile_object:
+					if is_tile_object:
+						if (sprite.get_texture() != null):
+							sprite.set_offset(Vector2(0, -sprite.get_texture().get_height()))
+					else:
 						sprite.set_region(true)
 						sprite.set_region_rect(tileset.tile_get_region(tileid))
+						sprite.set_offset(Vector2(0, -tileset.tile_get_region(tileid).size.y))
+
 
 					if obj.has("name") and not obj.name.empty():
 						sprite.set_name(obj.name);
@@ -562,6 +585,7 @@ func build():
 						pos.x = pos.x + float(obj.width) / 2
 						pos.y = pos.y - float(obj.height) / 2
 					sprite.set_pos(pos)
+					sprite.set_centered(false)
 
 					var rot = 0
 					if obj.has("rotation"):
