@@ -557,15 +557,17 @@ func build():
 					var is_tile_object = tileset.tile_get_region(tileid) == Rect2(0, 0, 0, 0)
 					var sprite = Sprite.new()
 					sprite.set_texture(tileset.tile_get_texture(tileid))
+					var sprite_dimensions = Vector2()
 
 					if is_tile_object:
 						if (sprite.get_texture() != null):
-							sprite.set_offset(Vector2(0, -sprite.get_texture().get_height()))
+							sprite_dimensions = sprite.get_texture().get_size()
 					else:
 						sprite.set_region(true)
 						sprite.set_region_rect(tileset.tile_get_region(tileid))
-						sprite.set_offset(Vector2(0, -tileset.tile_get_region(tileid).size.y))
+						sprite_dimensions = tileset.tile_get_region(tileid).size
 
+					sprite.set_offset(Vector2(0, -sprite_dimensions.y))
 
 					if obj.has("name") and not obj.name.empty():
 						sprite.set_name(obj.name);
@@ -589,6 +591,9 @@ func build():
 						pos.y = pos.y - float(obj.height) / 2
 					sprite.set_pos(pos)
 					sprite.set_centered(false)
+
+					if sprite_dimensions != Vector2() and obj.has("width") and obj.has("height"):
+						sprite.set_scale(Vector2(float(obj.width) / sprite_dimensions.x, float(obj.height) / sprite_dimensions.y))
 
 					var rot = 0
 					if obj.has("rotation"):
