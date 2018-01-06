@@ -41,11 +41,12 @@ func get_resource_type():
 	return "PackedScene"
 
 func get_preset_count():
-	return 1
+	return 2
 
 func get_preset_name(preset):
 	match preset:
 		0: return "Default"
+		1: return "Pixel Art"
 
 func get_import_options(preset):
 	return [
@@ -54,12 +55,16 @@ func get_import_options(preset):
 			"default_value": true
 		},
 		{
+			"name": "tile_metadata",
+			"default_value": false
+		},
+		{
 			"name": "uv_clip",
 			"default_value": true
 		},
 		{
 			"name": "image_flags",
-			"default_value": Texture.FLAGS_DEFAULT,
+			"default_value": 0 if preset == 1 else Texture.FLAGS_DEFAULT,
 			"property_hint": PROPERTY_HINT_FLAGS,
 			"hint_string": "Mipmaps,Repeat,Filter,Anisotropic,sRGB,Mirrored Repeat"
 		},
