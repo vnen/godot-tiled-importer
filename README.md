@@ -3,7 +3,7 @@
 This is a plugin for [Godot Engine](https://godotengine.org) to import
 `TileMap`s and `TileSet`s from the [Tiled Map Editor](http://www.mapeditor.org).
 
-![](https://lut.im/uWPHymdSvs/l60C9UiVlrqK3bea.png)
+**Note: This is compatible only with Godot 3.0 or later. For Godot 2.x, use the [1.x branch](https://github.com/vnen/godot-tiled-importer/tree/1.x).**
 
 ## Installation
 
@@ -19,27 +19,37 @@ Then enable the plugin on the Project Settings.
 * Import Tiled file as a Godot scene. Each layer in Tiled is a TileMap in Godot.
 * Both `.tmx` (XML) and `.json` formats.
 * Support for Base64 encoded map.
-* Orthogonal and isometric maps.
+* Support for layer compression, both `zlib` and `gzip` are supported.
+* Orthogonal, isometric, and staggered (odd-indexed only) maps.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
 * Custom import options, such as whether to embed the resources into the scene.
 * Support for image layers
 * Support for object layers, which are imported as StaticBody2D or LightOccluder2D
   for shapes (depending on the `type` property) and as Sprite for tiles.
+* Support for group layers, which are imported as `Node2D`s.
 * Custom properties for maps, layers, tilesets, and objects are imported as
-  metadata.
+  metadata. Custom properties on tiles can be imported into the TileSet resource.
 * Support for post-import script.
 
-## Usage
+## Usage (once the plugin is enabled)
 
-1. In Godot, click on menu Import -> TileMap from Tiled Editor.
-2. Set the source Tiled file (either a `.json` or a `.tmx`).
-3. Set the target destination scene.
-4. Ajusted the desired options.
-5. Press ok.
+1. Place your maps inside your project.
+2. Watch Godot import it automatically.
 
-If no error occurs, the generated scene will be stored where you set it. The
-TileSets will be on a relative folder or embedded, depending on the options.
+The map file can be used as if it were a scene, but you can not edit it in Godot.
+If you need to make changes, create an inherited scene or instance the map in
+another scene.
+
+Whenever you make a change to the map in Tiled, Godot will reimport the scene and
+update it in the editor if it's open.
+
+If the file can't be imported, an error message will be generated in the output.
+Please check the output if you are having an issue.
+
+**Note:** If you have an external tileset or any other `.json` file in your project,
+this plugin will try to import it and fail. Consider putting those files in a folder
+alongside a `.gdignore` file so Godot won't try to import them.
 
 ## Caveats on Tiled maps
 
@@ -63,13 +73,60 @@ TileSets will be on a relative folder or embedded, depending on the options.
 * Occluder shapes are set as closed if a polygon is used and as open if it is
   a polyline.
 
-* Godot has no decompression function (yet). So don't save the Tiled Map with
-  any compressed format. "Base64 (uncompressed)" is also valid. You'll receive
-  an error message if compressed data is detected.
-
 ## Options
 
+There are two import presets: `Default` and `Pixel Art`. The difference is that
+the `Pixel Art` preset don't use any flag for the texture, disabling filter,
+mipmaps, and repeat. Note that you can set a different default preset on Godot.
+
+### Custom Properties
+
+**Default: `On`**
+
+Whether or not to save the custom properties as metadata in the nodes and resources.
+
+### TIle Metadata
+
+**Default: `Off`**
+
+Whether or not to save the tile metadata into the TileSet resource. It will be set
+as a dictionary named `tile_meta` where the key is the tile global id (the same id
+used in the Godot TileMap).
+
+### Clip Uv
+
+**Default: `On`**
+
+Enable the Clip Uv (Filter Clip on Sprites) to avoid image bleeding on tiles.
+
+### Image Flags
+
+**Default: `Mipmaps, Repeat, Filter`** (Note: this is set as `Texture.FLAGS_DEFAULT`)
+
+The image flags to apply to all imported TileSet images. This will only work if images
+are embedded, otherwise they will use the flags from their own import settings.
+
+### Embed Internal Images
+
+**Default: `Off`**
+
+By default, if an image is inside the project, it won't be reimported. If this option
+is enabled, the images will be embedded into the imported scene. This is useful if you
+need to use the image somewhere else with different import settings.
+
+### Save Tiled Properties
+
+**Default: `Off`**
+
+Save the regular properties from Tiled inside the objects as metadata. They will be
+placed alongside the custom properties.
+
+**Note:** Not *all* properties from the file are saved, only the ones you can see on
+Tiled interface.
+
 ### Post-import script
+
+**Default: `None`**
 
 The selected script will have it's `post_import(scene)` method run. This
 enables you to change the generated scene automatically upon each reimport.
@@ -77,36 +134,6 @@ enables you to change the generated scene automatically upon each reimport.
 The `post_import` method will receive the built scene and **must** return the
 changed scene.
 
-### Single TileSet
-
-Save all Tiled tilesets a single Godot resource. If any of your layers uses
-more than one tileset image, this is required otherwise it won't be generated
-properly.
-
-### Embed resources
-
-Save all TileSets and images embedded in the target scene. Otherwise they will
-be saved individually in the selected relative folder.
-
-### Relative resource path
-
-The relative path from the target scene where to save the resources
-(images and tilesets).
-
-### Image flags
-
-The image flags to apply to all imported TileSet images.
-
-### Create separate image directories
-
-When the TileSet is a collection of images, this option tells tp create a new
-directory with the TileSet name to hold all of the images.
-
-### Custom properties
-
-Whether or not to save the custom properties as metadata in the nodes and resources.
-
-
 ## License
 
-[MIT License](LICENSE). Copyright (c) 2016 George Marques.
+[MIT License](LICENSE). Copyright (c) 2018 George Marques.
