@@ -345,7 +345,7 @@ func make_layer(layer, parent, root, data):
 				var rot = 0
 				var scale = Vector2(1, 1)
 				sprite.texture = tileset.tile_get_texture(tile_id)
-				var texture_size = sprite.texture.get_size()
+				var texture_size = sprite.texture.get_size() if sprite.texture != null else Vector2()
 
 				if not is_tile_object:
 					sprite.region_enabled = true
@@ -365,10 +365,11 @@ func make_layer(layer, parent, root, data):
 					pos.y = float(object.y)
 				if "rotation" in object:
 					rot = float(object.rotation)
-				if "width" in object and float(object.width) != texture_size.x:
-					scale.x = float(object.width) / texture_size.x
-				if "height" in object and float(object.height) != texture_size.y:
-					scale.y = float(object.height) / texture_size.y
+				if texture_size != Vector2():
+					if "width" in object and float(object.width) != texture_size.x:
+						scale.x = float(object.width) / texture_size.x
+					if "height" in object and float(object.height) != texture_size.y:
+						scale.y = float(object.height) / texture_size.y
 
 				sprite.position = pos
 				sprite.rotation_degrees = rot
@@ -625,18 +626,11 @@ func shape_from_object(object):
 			shape.polygon = vertices
 			shape.closed = "polygon" in object
 		else:
+			shape = ConvexPolygonShape2D.new()
 			if is_convex(vertices):
-				shape = ConvexPolygonShape2D.new()
 				var sorter = PolygonSorter.new()
-				shape.points = sorter.sort_polygon(vertices)
-			else:
-				shape = ConcavePolygonShape2D.new()
-				var segments = [vertices[0]]
-				for x in range(1, vertices.size()):
-					segments.push_back(vertices[x])
-					segments.push_back(vertices[x])
-				segments.push_back(vertices[0])
-				shape.segments = segments
+				vertices = sorter.sort_polygon(vertices)
+			shape.points = vertices
 	elif "ellipse" in object:
 		if object.type == "navigation" or object.type == "occluder":
 			printerr("Ellipse shapes are not supported as navigation or occluder. Use polygon/polyline instead.")
