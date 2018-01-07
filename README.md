@@ -17,7 +17,9 @@ Then enable the plugin on the Project Settings.
 ## Features
 
 * Import Tiled file as a Godot scene. Each layer in Tiled is a TileMap in Godot.
-* Both `.tmx` (XML) and `.json` formats.
+* Import TileSets from Tiled standalone tileset files.
+* Both `.tmx` (XML) and `.json` formats for maps.
+* Both `.tsx` (XML) and `.json` formats for tilesets.
 * Support for Base64 encoded map.
 * Support for layer compression, both `zlib` and `gzip` are supported.
 * Orthogonal, isometric, and staggered (odd-indexed only) maps.
@@ -47,9 +49,14 @@ update it in the editor if it's open.
 If the file can't be imported, an error message will be generated in the output.
 Please check the output if you are having an issue.
 
-**Note:** If you have an external tileset or any other `.json` file in your project,
-this plugin will try to import it and fail. Consider putting those files in a folder
-alongside a `.gdignore` file so Godot won't try to import them.
+Note that if you are using external tilesets, note that they will also be imported,
+which may increase the final export size of your project. To mitigate that, you can
+exclude those files from the export or put them in a folder alongside a `.gdignore`
+file so they are not even imported.
+
+**Note:** If you have other `.json` files in your project, this plugin will try to
+import them and fail. Consider putting those files in a folder alongside a
+`.gdignore` file so Godot won't try to import them.
 
 ## Caveats on Tiled maps
 
@@ -73,11 +80,21 @@ alongside a `.gdignore` file so Godot won't try to import them.
 * Occluder shapes are set as closed if a polygon is used and as open if it is
   a polyline.
 
-## Options
+* For isometric staggered maps, only odd-indexed is supported. For even-indexed
+it would require some extra tricks during import. This may be available in the
+future.
+
+## Options (Maps and TileSets)
 
 There are two import presets: `Default` and `Pixel Art`. The difference is that
 the `Pixel Art` preset don't use any flag for the texture, disabling filter,
-mipmaps, and repeat. Note that you can set a different default preset on Godot.
+mipmaps, and repeat.
+
+Because it overrides the image flags, it also embed internal images by default,
+otherwise it won't make a difference. If you want to avoid that, use the Default
+preset and import your images without flags.
+
+Note that you can set a different default preset on Godot.
 
 ### Custom Properties
 
@@ -85,7 +102,7 @@ mipmaps, and repeat. Note that you can set a different default preset on Godot.
 
 Whether or not to save the custom properties as metadata in the nodes and resources.
 
-### TIle Metadata
+### Tile Metadata
 
 **Default: `Off`**
 
@@ -93,7 +110,7 @@ Whether or not to save the tile metadata into the TileSet resource. It will be s
 as a dictionary named `tile_meta` where the key is the tile global id (the same id
 used in the Godot TileMap).
 
-### Clip Uv
+### Clip Uv (Map only)
 
 **Default: `On`**
 
@@ -131,8 +148,8 @@ Tiled interface.
 The selected script will have it's `post_import(scene)` method run. This
 enables you to change the generated scene automatically upon each reimport.
 
-The `post_import` method will receive the built scene and **must** return the
-changed scene.
+The `post_import` method will receive the built scene (or TileSet) and **must**
+return the changed scene (or TileSet).
 
 ## License
 

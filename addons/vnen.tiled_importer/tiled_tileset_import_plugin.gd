@@ -28,19 +28,19 @@ enum Preset { PRESET_DEFAULT, PRESET_PIXEL_ART }
 const TiledMapReader = preload("tiled_map_reader.gd")
 
 func get_importer_name():
-	return "vnen.tiled_importer"
+	return "vnen.tiled_tileset_importer"
 
 func get_visible_name():
-	return "Scene from Tiled"
+	return "TileSet from Tiled"
 
 func get_recognized_extensions():
-	return ["json", "tmx"]
+	return ["json", "tsx"]
 
 func get_save_extension():
-	return "scn"
+	return "res"
 
 func get_resource_type():
-	return "PackedScene"
+	return "TileSet"
 
 func get_preset_count():
 	return 2
@@ -59,10 +59,6 @@ func get_import_options(preset):
 		{
 			"name": "tile_metadata",
 			"default_value": false
-		},
-		{
-			"name": "uv_clip",
-			"default_value": true
 		},
 		{
 			"name": "image_flags",
@@ -92,11 +88,11 @@ func get_option_visibility(option, options):
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var map_reader = TiledMapReader.new()
 
-	var scene = map_reader.build(source_file, options)
+	var tileset = map_reader.build_tileset(source_file, options)
 
-	if typeof(scene) != TYPE_OBJECT:
+	if typeof(tileset) != TYPE_OBJECT:
 		# Error happened
-		return scene
+		return tileset
 
 	# Post imports script
 	if not options.post_import_script.empty():
@@ -110,12 +106,10 @@ func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 			printerr("Post import script does not have a 'post_import' method.")
 			return ERR_INVALID_PARAMETER
 
-		scene = script.post_import(scene)
+		tileset = script.post_import(tileset)
 
-		if not scene or not scene is Node2D:
-			printerr("Invalid scene returned from post import script.")
+		if not tileset or not tileset is TileSet:
+			printerr("Invalid TileSet returned from post import script.")
 			return ERR_INVALID_DATA
 
-	var packed_scene = PackedScene.new()
-	packed_scene.pack(scene)
-	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], packed_scene)
+	return ResourceSaver.save("%s.%s" % [save_path, get_save_extension()], tileset)

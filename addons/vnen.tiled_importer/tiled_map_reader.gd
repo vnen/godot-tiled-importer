@@ -69,7 +69,7 @@ func build(source_path, options):
 
 			# TODO: hexagonal orientation
 
-	var tileset = build_tileset(map.tilesets, source_path, options)
+	var tileset = build_tileset_for_scene(map.tilesets, source_path, options)
 	if typeof(tileset) != TYPE_OBJECT:
 		# Error happened
 		return tileset
@@ -416,7 +416,7 @@ func make_layer(layer, parent, root, data):
 
 # Makes a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
-func build_tileset(tilesets, source_path, options):
+func build_tileset_for_scene(tilesets, source_path, options):
 	var result = TileSet.new()
 	var err = ERR_INVALID_DATA
 
@@ -541,6 +541,20 @@ func build_tileset(tilesets, source_path, options):
 
 	return result
 
+# Makes a standalone TileSet. Useful for importing TileSets from Tiled
+# Returns an error code if fails
+func build_tileset(source_path, options):
+	var set = read_tileset_file(source_path)
+	if typeof(set) == TYPE_INT:
+		return set
+	if typeof(set) != TYPE_DICTIONARY:
+		return ERR_INVALID_DATA
+
+	# Just to validate and build correctly using the existing builder
+	set["firstgid"] = 1
+
+	return build_tileset_for_scene([set], source_path, options)
+
 # Loads an image from a given path
 # Returns a Texture
 func load_image(rel_path, source_path, options):
@@ -589,6 +603,31 @@ func read_file(path):
 		return data
 
 	# Not TMX, must be JSON
+	var file = File.new()
+	var err = file.open(path, File.READ)
+	if err != OK:
+		return err
+
+	var content = JSON.parse(file.get_as_text())
+	if content.error != OK:
+		printerr("Error parsing JSON: ", content.error_string)
+		return content.error
+
+	return content.result
+
+# Reads a tileset file and return its contents as a dictionary
+# Returns an error code if fails
+func read_tileset_file(path):
+	if path.get_extension().to_lower() == "tsx":
+		var tmx_to_dict = TiledXMLToDictionary.new()
+		var data = tmx_to_dict.read_tsx(path)
+		if typeof(data) != TYPE_DICTIONARY:
+			# Error happened
+			printerr("Error parsing map file '%s'." % [path])
+		# Return error or result
+		return data
+
+	# Not TSX, must be JSON
 	var file = File.new()
 	var err = file.open(path, File.READ)
 	if err != OK:
