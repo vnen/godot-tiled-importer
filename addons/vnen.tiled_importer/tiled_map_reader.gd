@@ -272,7 +272,7 @@ func make_layer(layer, parent, root, data):
 					occluder.set_owner(root)
 
 				else:
-					var body = StaticBody2D.new()
+					var body = Area2D.new() if "type" in object and object.type == "area" else StaticBody2D.new()
 
 					var offset = Vector2()
 					var collision
