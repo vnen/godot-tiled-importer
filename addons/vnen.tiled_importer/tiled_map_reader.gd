@@ -35,6 +35,9 @@ const TiledXMLToDictionary = preload("tiled_xml_to_dict.gd")
 # Polygon vertices sorter
 const PolygonSorter = preload("polygon_sorter.gd")
 
+# Prefix for error messages, make easier to identify the source
+const error_prefix = "Tiled Importer: "
+
 # Main function
 # Reads a source file and gives back a scene
 func build(source_path, options):
@@ -219,7 +222,7 @@ func make_layer(layer, parent, root, data):
 			if "point" in object and object.point:
 				var point = Position2D.new()
 				if not "x" in object or not "y" in object:
-					printerr("Missing coordinates for point in object layer.")
+					print_error("Missing coordinates for point in object layer.")
 					continue
 				point.position = Vector2(float(object.x), float(object.y))
 				point.visible = bool(object.visible) if "visible" in object else true
@@ -236,7 +239,7 @@ func make_layer(layer, parent, root, data):
 				# Not a tile object
 				if "type" in object and object.type == "navigation":
 					# Can't make navigation objects right now
-					printerr("Navigation polygons aren't supported in an object layer.")
+					print_error("Navigation polygons aren't supported in an object layer.")
 					continue # Non-fatal error
 				var shape = shape_from_object(object)
 
@@ -415,7 +418,7 @@ func make_layer(layer, parent, root, data):
 			make_layer(sub_layer, group, root, data)
 
 	else:
-		printerr("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
+		print_error("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
 		return ERR_INVALID_DATA
 
 	return OK
@@ -432,7 +435,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 		var ts_source_path = source_path
 		if "source" in ts:
 			if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
-				printerr("Missing or invalid firstgid tileset property.")
+				print_error("Missing or invalid firstgid tileset property.")
 				return ERR_INVALID_DATA
 
 			ts_source_path = source_path.get_base_dir().plus_file(ts.source)
@@ -447,17 +450,17 @@ func build_tileset_for_scene(tilesets, source_path, options):
 				var f = File.new()
 				err = f.open(ts_source_path, File.READ)
 				if err != OK:
-					printerr("Error opening tileset '%s'." % [ts.source])
+					print_error("Error opening tileset '%s'." % [ts.source])
 					return err
 
 				var json_res = JSON.parse(f.get_as_text())
 				if json_res.error != OK:
-					printerr("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
+					print_error("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
 					return ERR_INVALID_DATA
 
 				ts = json_res.result
 				if typeof(ts) != TYPE_DICTIONARY:
-					printerr("Tileset '%s' is not a dictionary." % [ts.source])
+					print_error("Tileset '%s' is not a dictionary." % [ts.source])
 					return ERR_INVALID_DATA
 
 			ts.firstgid = tileset.firstgid
@@ -580,7 +583,7 @@ func load_image(rel_path, source_path, options):
 
 	var ext = rel_path.get_extension().to_lower()
 	if ext != "png" and ext != "jpg":
-		printerr("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
+		print_error("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
 		return ERR_FILE_UNRECOGNIZED
 
 	var total_path = rel_path if rel_path.is_abs_path() else source_path.get_base_dir().plus_file(rel_path)
@@ -588,7 +591,7 @@ func load_image(rel_path, source_path, options):
 
 	var dir = Directory.new()
 	if not dir.file_exists(total_path):
-		printerr("Image not found: %s" % [total_path])
+		print_error("Image not found: %s" % [total_path])
 		return ERR_FILE_NOT_FOUND
 
 	if not total_path.begins_with("res://"):
@@ -615,7 +618,7 @@ func read_file(path):
 		var data = tmx_to_dict.read_tmx(path)
 		if typeof(data) != TYPE_DICTIONARY:
 			# Error happened
-			printerr("Error parsing map file '%s'." % [path])
+			print_error("Error parsing map file '%s'." % [path])
 		# Return error or result
 		return data
 
@@ -627,7 +630,7 @@ func read_file(path):
 
 	var content = JSON.parse(file.get_as_text())
 	if content.error != OK:
-		printerr("Error parsing JSON: ", content.error_string)
+		print_error("Error parsing JSON: ", content.error_string)
 		return content.error
 
 	return content.result
@@ -640,7 +643,7 @@ func read_tileset_file(path):
 		var data = tmx_to_dict.read_tsx(path)
 		if typeof(data) != TYPE_DICTIONARY:
 			# Error happened
-			printerr("Error parsing map file '%s'." % [path])
+			print_error("Error parsing map file '%s'." % [path])
 		# Return error or result
 		return data
 
@@ -652,7 +655,7 @@ func read_tileset_file(path):
 
 	var content = JSON.parse(file.get_as_text())
 	if content.error != OK:
-		printerr("Error parsing JSON: ", content.error_string)
+		print_error("Error parsing JSON: ", content.error_string)
 		return content.error
 
 	return content.result
@@ -689,11 +692,11 @@ func shape_from_object(object):
 			shape.points = vertices
 	elif "ellipse" in object:
 		if object.type == "navigation" or object.type == "occluder":
-			printerr("Ellipse shapes are not supported as navigation or occluder. Use polygon/polyline instead.")
+			print_error("Ellipse shapes are not supported as navigation or occluder. Use polygon/polyline instead.")
 			return ERR_INVALID_DATA
 
 		if not "width" in object or not "height" in object:
-			printerr("Missing width or height in ellipse shape.")
+			print_error("Missing width or height in ellipse shape.")
 			return ERR_INVALID_DATA
 
 		var w = abs(float(object.width))
@@ -710,7 +713,7 @@ func shape_from_object(object):
 
 	else: # Rectangle
 		if not "width" in object or not "height" in object:
-			printerr("Missing width or height in rectangle shape.")
+			print_error("Missing width or height in rectangle shape.")
 			return ERR_INVALID_DATA
 
 		var size = Vector2(float(object.width), float(object.height))
@@ -763,7 +766,7 @@ func is_convex(vertices):
 # Compression argument is a string, either "gzip" or "zlib"
 func decompress_layer(layer_data, compression, map_size):
 	if compression != "gzip" and compression != "zlib":
-		printerr("Unrecognized compression format: %s" % [compression])
+		print_error("Unrecognized compression format: %s" % [compression])
 		return ERR_INVALID_DATA
 
 	var compression_type = File.COMPRESSION_DEFLATE if compression == "zlib" else File.COMPRESSION_GZIP
@@ -830,35 +833,35 @@ func object_sorter(first, second):
 # Returns an error code
 func validate_map(map):
 	if not "type" in map or map.type != "map":
-		printerr("Missing or invalid type property.")
+		print_error("Missing or invalid type property.")
 		return ERR_INVALID_DATA
 	elif not "version" in map or int(map.version) != 1:
-		printerr("Missing or invalid map version.")
+		print_error("Missing or invalid map version.")
 		return ERR_INVALID_DATA
 	elif not "height" in map or not str(map.height).is_valid_integer():
-		printerr("Missing or invalid height property.")
+		print_error("Missing or invalid height property.")
 		return ERR_INVALID_DATA
 	elif not "width" in map or not str(map.width).is_valid_integer():
-		printerr("Missing or invalid width property.")
+		print_error("Missing or invalid width property.")
 		return ERR_INVALID_DATA
 	elif not "tileheight" in map or not str(map.tileheight).is_valid_integer():
-		printerr("Missing or invalid tileheight property.")
+		print_error("Missing or invalid tileheight property.")
 		return ERR_INVALID_DATA
 	elif not "tilewidth" in map or not str(map.tilewidth).is_valid_integer():
-		printerr("Missing or invalid tilewidth property.")
+		print_error("Missing or invalid tilewidth property.")
 		return ERR_INVALID_DATA
 	elif not "layers" in map or typeof(map.layers) != TYPE_ARRAY:
-		printerr("Missing or invalid layers property.")
+		print_error("Missing or invalid layers property.")
 		return ERR_INVALID_DATA
 	elif not "tilesets" in map or typeof(map.tilesets) != TYPE_ARRAY:
-		printerr("Missing or invalid tilesets property.")
+		print_error("Missing or invalid tilesets property.")
 		return ERR_INVALID_DATA
 	elif "orientation" in map and (map.orientation == "staggered" or map.orientation == "hexagonal"):
 		if not "staggeraxis" in map:
-			printerr("Missing stagger axis property.")
+			print_error("Missing stagger axis property.")
 			return ERR_INVALID_DATA
 		elif not "staggerindex" in map:
-			printerr("Missing stagger axis property.")
+			print_error("Missing stagger axis property.")
 			return ERR_INVALID_DATA
 	return OK
 
@@ -866,27 +869,27 @@ func validate_map(map):
 # Returns an error code
 func validate_tileset(tileset):
 	if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
-		printerr("Missing or invalid firstgid tileset property.")
+		print_error("Missing or invalid firstgid tileset property.")
 		return ERR_INVALID_DATA
 	elif not "tilewidth" in tileset or not str(tileset.tilewidth).is_valid_integer():
-		printerr("Missing or invalid tilewidth tileset property.")
+		print_error("Missing or invalid tilewidth tileset property.")
 		return ERR_INVALID_DATA
 	elif not "tileheight" in tileset or not str(tileset.tileheight).is_valid_integer():
-		printerr("Missing or invalid tileheight tileset property.")
+		print_error("Missing or invalid tileheight tileset property.")
 		return ERR_INVALID_DATA
 	elif not "tilecount" in tileset or not str(tileset.tilecount).is_valid_integer():
-		printerr("Missing or invalid tilecount tileset property.")
+		print_error("Missing or invalid tilecount tileset property.")
 		return ERR_INVALID_DATA
 	elif not "image" in tileset:
 		for tile in tileset.tiles:
 			if not "image" in tileset.tiles[tile]:
-				printerr("Missing or invalid image in tileset property.")
+				print_error("Missing or invalid image in tileset property.")
 				return ERR_INVALID_DATA
 	elif not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
-		printerr("Missing or invalid imagewidth tileset property.")
+		print_error("Missing or invalid imagewidth tileset property.")
 		return ERR_INVALID_DATA
 	elif not "imageheight" in tileset or not str(tileset.imageheight).is_valid_integer():
-		printerr("Missing or invalid imageheight tileset property.")
+		print_error("Missing or invalid imageheight tileset property.")
 		return ERR_INVALID_DATA
 	return OK
 
@@ -894,36 +897,40 @@ func validate_tileset(tileset):
 # Returns an error code
 func validate_layer(layer):
 	if not "type" in layer:
-		printerr("Missing or invalid type layer property.")
+		print_error("Missing or invalid type layer property.")
 		return ERR_INVALID_DATA
 	elif not "name" in layer:
-		printerr("Missing or invalid name layer property.")
+		print_error("Missing or invalid name layer property.")
 		return ERR_INVALID_DATA
 	elif layer.type == "tilelayer":
 		if not "data" in layer:
-			printerr("Missing data layer property.")
+			print_error("Missing data layer property.")
 			return ERR_INVALID_DATA
 		elif "encoding" in layer:
 			if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
-				printerr("Invalid data layer property.")
+				print_error("Invalid data layer property.")
 				return ERR_INVALID_DATA
 		elif typeof(layer.data) != TYPE_ARRAY:
-			printerr("Invalid data layer property.")
+			print_error("Invalid data layer property.")
 			return ERR_INVALID_DATA
 		elif "compression" in layer:
 			if layer.compression != "gzip" and layer.compression != "zlib":
-				printerr("Invalid compression type.")
+				print_error("Invalid compression type.")
 				return ERR_INVALID_DATA
 	elif layer.type == "imagelayer":
 		if not "image" in layer or typeof(layer.image) != TYPE_STRING:
-			printerr("Missing or invalid image path for layer.")
+			print_error("Missing or invalid image path for layer.")
 			return ERR_INVALID_DATA
 	elif layer.type == "objectgroup":
 		if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
-			printerr("Missing or invalid objects array for layer.")
+			print_error("Missing or invalid objects array for layer.")
 			return ERR_INVALID_DATA
 	elif layer.type == "group":
 		if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
-			printerr("Missing or invalid layer array for group layer.")
+			print_error("Missing or invalid layer array for group layer.")
 			return ERR_INVALID_DATA
 	return OK
+
+# Custom function to print error, to centralize the prefix addition
+func print_error(err):
+	printerr(error_prefix + err)
