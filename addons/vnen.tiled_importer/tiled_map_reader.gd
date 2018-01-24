@@ -350,6 +350,7 @@ func make_layer(layer, parent, root, data):
 				if not is_tile_object:
 					sprite.region_enabled = true
 					sprite.region_rect = tileset.tile_get_region(tile_id)
+					texture_size = tileset.tile_get_region(tile_id).size
 
 				if "name" in object and not str(object.name).empty():
 					sprite.set_name(str(object.name))
@@ -384,6 +385,11 @@ func make_layer(layer, parent, root, data):
 				sprite.set_owner(root)
 
 				if options.custom_properties:
+					if options.tile_metadata:
+						var tile_meta = tileset.get_meta("tile_meta")
+						if typeof(tile_meta) == TYPE_DICTIONARY and tile_id in tile_meta:
+							for prop in tile_meta[tile_id]:
+								sprite.set_meta(prop, tile_meta[tile_id][prop])
 					set_custom_properties(sprite, object)
 	elif layer.type == "group":
 		var group = Node2D.new()
@@ -419,6 +425,7 @@ func make_layer(layer, parent, root, data):
 func build_tileset_for_scene(tilesets, source_path, options):
 	var result = TileSet.new()
 	var err = ERR_INVALID_DATA
+	var tile_meta = {}
 
 	for tileset in tilesets:
 		var ts = tileset
@@ -529,6 +536,10 @@ func build_tileset_for_scene(tilesets, source_path, options):
 					else:
 						result.tile_add_shape(gid, shape, Transform2D(0, offset))
 
+			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
+					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
+				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
+
 			gid += 1
 			i += 1
 			x += int(tilesize.x) + spacing
@@ -538,6 +549,12 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 		if str(ts.name) != "":
 			result.resource_name = ts.name
+
+		if options.custom_properties:
+			if "properties" in ts and "propertytypes" in ts:
+				set_custom_properties(result, ts.properties, ts.propertytypes)
+			if options.tile_metadata:
+				result.set_meta("tile_meta", tile_meta)
 
 	return result
 
@@ -777,8 +794,16 @@ func decode_layer(layer_data):
 func set_custom_properties(object, tiled_object):
 	if not "properties" in tiled_object or not "propertytypes" in tiled_object:
 		return
-	var properties = tiled_object.properties
-	var types = tiled_object.propertytypes
+
+	var properties = get_custom_properties(tiled_object.properties, tiled_object.propertytypes)
+	for property in properties:
+		object.set_meta(property, properties[property])
+
+# Get the custom properties as a dictionary
+# Useful for tile meta, which is not stored directly
+func get_custom_properties(properties, types):
+	var result = {}
+
 	for property in properties:
 		var value = null
 		if str(types[property]).to_lower() == "bool":
@@ -791,7 +816,8 @@ func set_custom_properties(object, tiled_object):
 			value = Color(properties[property])
 		else:
 			value = str(properties[property])
-		object.set_meta(property, value)
+		result[property] = value
+	return result
 
 # Custom function to sort objects in an object layer
 # This is done to support the "topdown" draw order, which sorts by 'y' coordinate
