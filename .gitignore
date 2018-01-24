@@ -1,7 +1,7 @@
 # Everything except the addon itself and doc files
 /*
 /*/
-!/addons/
+!/addons/vnen.tiled_importer/
 !README.md
 !LICENSE
 !.gitignore
