@@ -586,7 +586,9 @@ func load_image(rel_path, source_path, options):
 		print_error("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
 		return ERR_FILE_UNRECOGNIZED
 
-	var total_path = rel_path if rel_path.is_abs_path() else source_path.get_base_dir().plus_file(rel_path)
+	var total_path = rel_path
+	if rel_path.is_rel_path():
+		total_path = ProjectSettings.globalize_path(source_path.get_base_dir()).plus_file(rel_path)
 	total_path = ProjectSettings.localize_path(total_path)
 
 	var dir = Directory.new()
