@@ -24,10 +24,10 @@ Then enable the plugin on the Project Settings.
 * Support for layer compression, both `zlib` and `gzip` are supported.
 * Orthogonal, isometric, and staggered (odd-indexed only) maps.
 * Import visibility and opacity from layers.
-* Import collision/occluder/navigation shapes (based on Tiled object type).
+* Import collision/occluder/navigation/area shapes (based on Tiled object type).
 * Custom import options, such as whether to embed the resources into the scene.
 * Support for image layers
-* Support for object layers, which are imported as StaticBody2D or LightOccluder2D
+* Support for object layers, which are imported as StaticBody2D, Area2D or LightOccluder2D
   for shapes (depending on the `type` property) and as Sprite for tiles.
 * Support for group layers, which are imported as `Node2D`s.
 * Custom properties for maps, layers, tilesets, and objects are imported as
@@ -69,7 +69,7 @@ import them and fail. Consider putting those files in a folder alongside a
   will be converted to a capsule shape, which may be imprecise. However, if the
   Tiled ellipse is a perfect circle, a CircleShape2D will be used instead.
 
-* Set the type of the object to `navigation` or `occluder` to use it as such.
+* Set the type of the object to `area`, `navigation` or `occluder` to use it as such.
 
 * Objects in object layer cannot be set as `navigation`.
 
