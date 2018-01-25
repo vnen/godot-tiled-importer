@@ -38,6 +38,29 @@ const PolygonSorter = preload("polygon_sorter.gd")
 # Prefix for error messages, make easier to identify the source
 const error_prefix = "Tiled Importer: "
 
+# Properties to save the value in the metadata
+const whitelist_properties = [
+	"compression",
+	"draworder",
+	"height",
+	"imageheight",
+	"imagewidth",
+	"infinite",
+	"margin",
+	"name",
+	"orientation",
+	"probability",
+	"spacing",
+	"tilecount",
+	"tiledversion",
+	"tileheight",
+	"tilewidth",
+	"type",
+	"version",
+	"visible",
+	"width"
+]
+
 # Main function
 # Reads a source file and gives back a scene
 func build(source_path, options):
@@ -79,6 +102,8 @@ func build(source_path, options):
 
 	var root = Node2D.new()
 	root.set_name(source_path.get_file().get_basename())
+	if options.save_tiled_properties:
+		set_tiled_properties_as_meta(root, map)
 	if options.custom_properties:
 		set_custom_properties(root, map)
 
@@ -169,6 +194,8 @@ func make_layer(layer, parent, root, data):
 
 			count += 1
 
+		if options.save_tiled_properties:
+			set_tiled_properties_as_meta(tilemap, layer)
 		if options.custom_properties:
 			set_custom_properties(tilemap, layer)
 
@@ -200,6 +227,8 @@ func make_layer(layer, parent, root, data):
 		sprite.texture = image
 		sprite.visible = visible
 		sprite.modulate = Color(1.0, 1.0, 1.0, opacity)
+		if options.save_tiled_properties:
+			set_tiled_properties_as_meta(sprite, layer)
 		if options.custom_properties:
 			set_custom_properties(sprite, layer)
 		parent.add_child(sprite)
@@ -207,6 +236,8 @@ func make_layer(layer, parent, root, data):
 		sprite.set_owner(root)
 	elif layer.type == "objectgroup":
 		var object_layer = Node2D.new()
+		if options.save_tiled_properties:
+			set_tiled_properties_as_meta(object_layer, layer)
 		if options.custom_properties:
 			set_custom_properties(object_layer, layer)
 		object_layer.modulate = Color(1.0, 1.0, 1.0, opacity)
@@ -233,6 +264,8 @@ func make_layer(layer, parent, root, data):
 					point.set_name(str(object.name))
 				elif "id" in object and not str(object.id).empty():
 					point.set_name(str(object.id))
+				if options.save_tiled_properties:
+					set_tiled_properties_as_meta(point, object)
 				if options.custom_properties:
 					set_custom_properties(point, object)
 
@@ -269,6 +302,8 @@ func make_layer(layer, parent, root, data):
 					elif "id" in object and not str(object.id).empty():
 						occluder.set_name(str(object.id))
 
+					if options.save_tiled_properties:
+						set_tiled_properties_as_meta(occluder, object)
 					if options.custom_properties:
 						set_custom_properties(occluder, object)
 
@@ -276,7 +311,7 @@ func make_layer(layer, parent, root, data):
 					occluder.set_owner(root)
 
 				else:
-					var body = Area2D.new() if "type" in object and object.type == "area" else StaticBody2D.new()
+					var body = Area2D.new() if object.type == "area" else StaticBody2D.new()
 
 					var offset = Vector2()
 					var collision
@@ -328,6 +363,8 @@ func make_layer(layer, parent, root, data):
 					body.add_child(collision)
 					collision.set_owner(root)
 
+					if options.save_tiled_properties:
+						set_tiled_properties_as_meta(body, object)
 					if options.custom_properties:
 						set_custom_properties(body, object)
 
@@ -388,6 +425,8 @@ func make_layer(layer, parent, root, data):
 				object_layer.add_child(sprite)
 				sprite.set_owner(root)
 
+				if options.save_tiled_properties:
+					set_tiled_properties_as_meta(sprite, object)
 				if options.custom_properties:
 					if options.tile_metadata:
 						var tile_meta = tileset.get_meta("tile_meta")
@@ -395,6 +434,7 @@ func make_layer(layer, parent, root, data):
 							for prop in tile_meta[tile_id]:
 								sprite.set_meta(prop, tile_meta[tile_id][prop])
 					set_custom_properties(sprite, object)
+
 	elif layer.type == "group":
 		var group = Node2D.new()
 		var pos = Vector2()
@@ -406,6 +446,8 @@ func make_layer(layer, parent, root, data):
 		group.visible = visible
 		group.position = pos
 
+		if options.save_tiled_properties:
+			set_tiled_properties_as_meta(group, layer)
 		if options.custom_properties:
 			set_custom_properties(group, layer)
 
@@ -545,7 +587,12 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
-				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
+				tile_meta[rel_id] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
+			if options.save_tiled_properties and rel_id in ts.tiles:
+				for property in whitelist_properties:
+					if property in ts.tiles[rel_id]:
+						if not rel_id in tile_meta: tile_meta[rel_id] = {}
+						tile_meta[rel_id][property] = ts.tiles[rel_id][property]
 
 			gid += 1
 			i += 1
@@ -557,6 +604,8 @@ func build_tileset_for_scene(tilesets, source_path, options):
 		if str(ts.name) != "":
 			result.resource_name = ts.name
 
+		if options.save_tiled_properties:
+			set_tiled_properties_as_meta(result, ts)
 		if options.custom_properties:
 			if "properties" in ts and "propertytypes" in ts:
 				set_custom_properties(result, ts.properties, ts.propertytypes)
@@ -828,6 +877,13 @@ func get_custom_properties(properties, types):
 			value = str(properties[property])
 		result[property] = value
 	return result
+
+# Get the available whitelisted properties from the Tiled object
+# And them as metadata in the Godot object
+func set_tiled_properties_as_meta(object, tiled_object):
+	for property in whitelist_properties:
+		if property in tiled_object:
+			object.set_meta(property, tiled_object[property])
 
 # Custom function to sort objects in an object layer
 # This is done to support the "topdown" draw order, which sorts by 'y' coordinate
