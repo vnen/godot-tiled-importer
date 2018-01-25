@@ -5,6 +5,11 @@ This is a plugin for [Godot Engine](https://godotengine.org) to import
 
 **Note: This is compatible only with Godot 3.0 or later. For Godot 2.x, use the [1.x branch](https://github.com/vnen/godot-tiled-importer/tree/1.x).**
 
+<img src="https://user-images.githubusercontent.com/5599796/35366974-29dd3a98-0163-11e8-844b-fcae103b3aa6.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366991-33a8acf6-0163-11e8-8515-1d457bf68d2b.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366983-2d69967a-0163-11e8-87e1-32a2b26a76e8.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366992-369c0cf0-0163-11e8-8008-b8dad1fb5d7f.png" width="300">
+
 ## Installation
 
 Simply download it from Godot Asset Library: https://godotengine.org/asset-library/asset/25.
@@ -24,9 +29,9 @@ Then enable the plugin on the Project Settings.
 * Support for layer compression, both `zlib` and `gzip` are supported.
 * Orthogonal, isometric, and staggered (odd-indexed only) maps.
 * Import visibility and opacity from layers.
-* Import collision/occluder/navigation/area shapes (based on Tiled object type).
-* Custom import options, such as whether to embed the resources into the scene.
-* Support for image layers
+* Import collision/occluder/navigation shapes (based on Tiled object type).
+* Custom import options, such as whether to enable UV clip.
+* Support for image layers.
 * Support for object layers, which are imported as StaticBody2D, Area2D or LightOccluder2D
   for shapes (depending on the `type` property) and as Sprite for tiles.
 * Support for group layers, which are imported as `Node2D`s.
@@ -83,6 +88,16 @@ import them and fail. Consider putting those files in a folder alongside a
 * For isometric staggered maps, only odd-indexed is supported. For even-indexed
 it would require some extra tricks during import. This may be available in the
 future.
+
+## Import system caveats
+
+* If you are embedding images, changing them won't trigger a reimport.
+
+* If you are using external tile sets in Tiled, changing the tile set won't
+trigger a reimport.
+
+* Essentially, every change you do that doesn't directly change the source Tiled
+map, won't trigger the automatic reimport.
 
 ## Options (Maps and TileSets)
 
