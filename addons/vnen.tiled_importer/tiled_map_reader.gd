@@ -199,6 +199,7 @@ func make_layer(layer, parent, root, data):
 		if options.custom_properties:
 			set_custom_properties(tilemap, layer)
 
+		tilemap.set("editor/display_folded", true)
 		parent.add_child(tilemap)
 		tilemap.set_owner(root)
 	elif layer.type == "imagelayer":
@@ -231,6 +232,8 @@ func make_layer(layer, parent, root, data):
 			set_tiled_properties_as_meta(sprite, layer)
 		if options.custom_properties:
 			set_custom_properties(sprite, layer)
+
+		sprite.set("editor/display_folded", true)
 		parent.add_child(sprite)
 		sprite.position = pos + offset
 		sprite.set_owner(root)
@@ -242,6 +245,7 @@ func make_layer(layer, parent, root, data):
 			set_custom_properties(object_layer, layer)
 		object_layer.modulate = Color(1.0, 1.0, 1.0, opacity)
 		object_layer.visible = visible
+		object_layer.set("editor/display_folded", true)
 		parent.add_child(object_layer)
 		object_layer.set_owner(root)
 		if "name" in layer and not layer.name.empty():
@@ -358,6 +362,7 @@ func make_layer(layer, parent, root, data):
 					if "rotation" in object:
 						rot = float(object.rotation)
 
+					body.set("editor/display_folded", true)
 					object_layer.add_child(body)
 					body.set_owner(root)
 					body.add_child(collision)
@@ -454,6 +459,7 @@ func make_layer(layer, parent, root, data):
 		if "name" in layer and not str(layer.name).empty():
 			group.set_name(str(layer.name))
 
+		group.set("editor/display_folded", true)
 		parent.add_child(group)
 		group.set_owner(root)
 
