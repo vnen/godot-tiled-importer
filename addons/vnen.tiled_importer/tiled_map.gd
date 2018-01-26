@@ -157,7 +157,7 @@ func build():
 		if ts.has("firstgid"):
 			firstgid = int(ts.firstgid)
 		if ts.has("name"):
-			name = ts.name
+			name = str(ts.name)
 		if ts.has("tilewidth") and ts.has("tileheight"):
 			tilesize = Vector2(int(ts.tilewidth), int(ts.tileheight))
 		else:
@@ -385,7 +385,7 @@ func build():
 			if l.image != "":
 				var image_path = options.basedir.plus_file(l.image) if l.image.is_rel_path() else l.image
 				var target_dir = options.target.get_base_dir().plus_file(options.rel_path)
-				var image = _load_image(image_path, target_dir, l.name + ".png")
+				var image = _load_image(image_path, target_dir, str(l.name) + ".png")
 
 				if typeof(image) == TYPE_STRING:
 					return image
