@@ -523,6 +523,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 		var spacing = int(ts.spacing) if "spacing" in ts and str(ts.spacing).is_valid_integer() else 0
 		var margin = int(ts.margin) if "margin" in ts and str(ts.margin).is_valid_integer() else 0
 		var firstgid = int(ts.firstgid)
+		var columns = int(ts.columns) if "columns" in ts and str(ts.columns).is_valid_integer() else -1
 
 		var image = null
 		var imagesize = Vector2()
@@ -543,6 +544,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 		var y = margin
 
 		var i = 0
+		var column = 0
 		while i < tilecount:
 			var tilepos = Vector2(x, y)
 			var region = Rect2(tilepos, tilesize)
@@ -601,11 +603,13 @@ func build_tileset_for_scene(tilesets, source_path, options):
 						tile_meta[rel_id][property] = ts.tiles[rel_id][property]
 
 			gid += 1
+			column += 1
 			i += 1
 			x += int(tilesize.x) + spacing
-			if x >= int(imagesize.x) - margin:
+			if (columns > 0 and column >= columns) or x >= int(imagesize.x) - margin or (x + int(tilesize.x)) > int(imagesize.x):
 				x = margin
 				y += int(tilesize.y) + spacing
+				column = 0
 
 		if str(ts.name) != "":
 			result.resource_name = ts.name
