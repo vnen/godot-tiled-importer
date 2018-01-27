@@ -145,6 +145,7 @@ func build():
 		var tilesize = Vector2()
 		var tilecount = 0
 		var has_global_img = false
+		var columns = -1
 
 		if ts.has("spacing"):
 			spacing = int(ts.spacing)
@@ -166,6 +167,8 @@ func build():
 			tilecount = int(ts.tilecount)
 		else:
 			return "Missing tile count (%s)" % [name]
+		if ts.has("columns") and str(ts.columns).is_valid_integer():
+			columns = int(ts.columns)
 		if ts.has("image"):
 			has_global_img = true
 			image_path = ts.source_dir.plus_file(ts.image) if ts.image.is_rel_path() else ts.image
@@ -188,6 +191,7 @@ func build():
 		var y = margin
 
 		var i = 0
+		var column = 0
 		while i < tilecount:
 
 			var tilepos = Vector2(x,y)
@@ -239,11 +243,13 @@ func build():
 					tile_meta[gid] = prop_dict
 
 			gid += 1
+			column += 1
 			i += 1
 			x += int(tilesize.x) + spacing
-			if x >= image_w - margin:
+			if (columns > 0 and column >= columns) or x >= image_w - margin or (x + int(tilesize.x)) > image_w:
 				x = margin
 				y += int(tilesize.y) + spacing
+				column = 0
 
 		if options.custom_properties and ts.has("properties") and ts.has("propertytypes"):
 			_set_meta(tileset, ts.properties, ts.propertytypes)
@@ -773,6 +779,7 @@ func _load_image(source_img, target_folder, filename, width = false, height = fa
 			if err != OK:
 				return "Couldn't save tileset image %s" % [source_img]
 
+	image.fix_alpha_edges()
 	return image
 
 # Parse the custom properties and set as meta of the object
