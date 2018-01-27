@@ -12,7 +12,7 @@ This is a plugin for [Godot Engine](https://godotengine.org) to import
 
 ## Installation
 
-Simply download it from Godot Asset Library: https://godotengine.org/asset-library/asset/25.
+Simply download it from Godot Asset Library: https://godotengine.org/asset-library/asset/158.
 
 Alternatively, download or clone this repository and copy the contents of the
 `addons` folder to your own project's `addons` folder.
