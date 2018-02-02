@@ -154,6 +154,14 @@ func parse_tileset(parser):
 				if typeof(tile_data) != TYPE_DICTIONARY:
 					# Error happened
 					return tile_data
+				if "properties" in tile_data and "propertytypes" in tile_data:
+					if not "tileproperties" in data:
+						data.tileproperties = {}
+						data.tilepropertytypes = {}
+					data.tileproperties[str(attr.id)] = tile_data.properties
+					data.tilepropertytypes[str(attr.id)] = tile_data.propertytypes
+					tile_data.erase("tileproperties")
+					tile_data.erase("tilepropertytypes")
 				data.tiles[str(attr.id)] = tile_data
 
 			elif parser.get_node_name() == "image":

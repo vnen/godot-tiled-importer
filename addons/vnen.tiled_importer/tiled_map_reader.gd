@@ -595,12 +595,12 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
-				tile_meta[rel_id] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
+				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
 			if options.save_tiled_properties and rel_id in ts.tiles:
 				for property in whitelist_properties:
 					if property in ts.tiles[rel_id]:
-						if not rel_id in tile_meta: tile_meta[rel_id] = {}
-						tile_meta[rel_id][property] = ts.tiles[rel_id][property]
+						if not gid in tile_meta: tile_meta[gid] = {}
+						tile_meta[gid][property] = ts.tiles[rel_id][property]
 
 			gid += 1
 			column += 1
@@ -635,7 +635,7 @@ func build_tileset(source_path, options):
 		return ERR_INVALID_DATA
 
 	# Just to validate and build correctly using the existing builder
-	set["firstgid"] = 1
+	set["firstgid"] = 0
 
 	return build_tileset_for_scene([set], source_path, options)
 
