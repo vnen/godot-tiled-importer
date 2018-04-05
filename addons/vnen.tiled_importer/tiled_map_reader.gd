@@ -911,12 +911,6 @@ func validate_map(map):
 	elif not "version" in map or int(map.version) != 1:
 		print_error("Missing or invalid map version.")
 		return ERR_INVALID_DATA
-	elif not "height" in map or not str(map.height).is_valid_integer():
-		print_error("Missing or invalid height property.")
-		return ERR_INVALID_DATA
-	elif not "width" in map or not str(map.width).is_valid_integer():
-		print_error("Missing or invalid width property.")
-		return ERR_INVALID_DATA
 	elif not "tileheight" in map or not str(map.tileheight).is_valid_integer():
 		print_error("Missing or invalid tileheight property.")
 		return ERR_INVALID_DATA
@@ -929,7 +923,7 @@ func validate_map(map):
 	elif not "tilesets" in map or typeof(map.tilesets) != TYPE_ARRAY:
 		print_error("Missing or invalid tilesets property.")
 		return ERR_INVALID_DATA
-	elif "orientation" in map and (map.orientation == "staggered" or map.orientation == "hexagonal"):
+	if "orientation" in map and (map.orientation == "staggered" or map.orientation == "hexagonal"):
 		if not "staggeraxis" in map:
 			print_error("Missing stagger axis property.")
 			return ERR_INVALID_DATA
@@ -953,17 +947,17 @@ func validate_tileset(tileset):
 	elif not "tilecount" in tileset or not str(tileset.tilecount).is_valid_integer():
 		print_error("Missing or invalid tilecount tileset property.")
 		return ERR_INVALID_DATA
-	elif not "image" in tileset:
-		for tile in tileset.tiles:
-			if not "image" in tileset.tiles[tile]:
-				print_error("Missing or invalid image in tileset property.")
-				return ERR_INVALID_DATA
 	elif not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
 		print_error("Missing or invalid imagewidth tileset property.")
 		return ERR_INVALID_DATA
 	elif not "imageheight" in tileset or not str(tileset.imageheight).is_valid_integer():
 		print_error("Missing or invalid imageheight tileset property.")
 		return ERR_INVALID_DATA
+	if not "image" in tileset:
+		for tile in tileset.tiles:
+			if not "image" in tileset.tiles[tile]:
+				print_error("Missing or invalid image in tileset property.")
+				return ERR_INVALID_DATA
 	return OK
 
 # Validates the layer dictionary content for missing or invalid keys
@@ -975,33 +969,47 @@ func validate_layer(layer):
 	elif not "name" in layer:
 		print_error("Missing or invalid name layer property.")
 		return ERR_INVALID_DATA
-	elif layer.type == "tilelayer":
-		if not "data" in layer:
-			print_error("Missing data layer property.")
-			return ERR_INVALID_DATA
-		elif "encoding" in layer:
-			if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
+	elif not "height" in layer or not str(layer.height).is_valid_integer():
+		print_error("Missing or invalid layer height property.")
+		return ERR_INVALID_DATA
+	elif not "width" in layer or not str(layer.width).is_valid_integer():
+		print_error("Missing or invalid layer width property.")
+		return ERR_INVALID_DATA
+	match layer.type:
+		"tilelayer":
+			if not "data" in layer:
+				if not "chunks" in layer:
+					print_error("Missing data or chunks layer properties.")
+					return ERR_INVALID_DATA
+				elif typeof(layer.chunks) != TYPE_ARRAY:
+					print_error("Invalid chunks layer property.")
+					return ERR_INVALID_DATA
+			elif "encoding" in layer:
+				if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
+					print_error("Invalid data layer property.")
+					return ERR_INVALID_DATA
+				elif typeof(layer.data) != TYPE_ARRAY:
+					print_error("Invalid data layer property.")
+					return ERR_INVALID_DATA
+			elif typeof(layer.data) != TYPE_ARRAY:
 				print_error("Invalid data layer property.")
 				return ERR_INVALID_DATA
-		elif typeof(layer.data) != TYPE_ARRAY:
-			print_error("Invalid data layer property.")
-			return ERR_INVALID_DATA
-		elif "compression" in layer:
-			if layer.compression != "gzip" and layer.compression != "zlib":
-				print_error("Invalid compression type.")
+			if "compression" in layer:
+				if layer.compression != "gzip" and layer.compression != "zlib":
+					print_error("Invalid compression type.")
+					return ERR_INVALID_DATA
+		"imagelayer":
+			if not "image" in layer or typeof(layer.image) != TYPE_STRING:
+				print_error("Missing or invalid image path for layer.")
 				return ERR_INVALID_DATA
-	elif layer.type == "imagelayer":
-		if not "image" in layer or typeof(layer.image) != TYPE_STRING:
-			print_error("Missing or invalid image path for layer.")
-			return ERR_INVALID_DATA
-	elif layer.type == "objectgroup":
-		if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
-			print_error("Missing or invalid objects array for layer.")
-			return ERR_INVALID_DATA
-	elif layer.type == "group":
-		if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
-			print_error("Missing or invalid layer array for group layer.")
-			return ERR_INVALID_DATA
+		"objectgroup":
+			if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
+				print_error("Missing or invalid objects array for layer.")
+				return ERR_INVALID_DATA
+		"group":
+			if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
+				print_error("Missing or invalid layer array for group layer.")
+				return ERR_INVALID_DATA
 	return OK
 
 # Custom function to print error, to centralize the prefix addition
