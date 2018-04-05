@@ -74,7 +74,6 @@ func build(source_path, options):
 	if err != OK:
 		return err
 
-	var map_size = Vector2(int(map.width), int(map.height))
 	var cell_size = Vector2(int(map.tilewidth), int(map.tileheight))
 	var map_mode = TileMap.MODE_SQUARE
 	var map_offset = TileMap.HALF_OFFSET_DISABLED
@@ -109,13 +108,13 @@ func build(source_path, options):
 
 	var map_data = {
 		"options": options,
-		"map_size": map_size,
 		"map_mode": map_mode,
 		"map_offset": map_offset,
 		"map_pos_offset": map_pos_offset,
 		"cell_size": cell_size,
 		"tileset": tileset,
-		"source_path": source_path
+		"source_path": source_path,
+		"infinite": bool(map.infinite) if "infinite" in map else false
 	}
 
 	for layer in map.layers:
@@ -131,7 +130,6 @@ func make_layer(layer, parent, root, data):
 		return err
 
 	# Main map data
-	var map_size = data.map_size
 	var map_mode = data.map_mode
 	var map_offset = data.map_offset
 	var map_pos_offset = data.map_pos_offset
@@ -139,22 +137,13 @@ func make_layer(layer, parent, root, data):
 	var options = data.options
 	var tileset = data.tileset
 	var source_path = data.source_path
+	var infinite = data.infinite
 
 	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
 	var visible = bool(layer.visible) if "visible" in layer else true
+	var layer_size = Vector2(int(layer.width), int(layer.height))
 
 	if layer.type == "tilelayer":
-		var layer_data = layer.data
-
-		if "encoding" in layer and layer.encoding == "base64":
-			if "compression" in layer:
-				layer_data = decompress_layer(layer_data, layer.compression, map_size)
-				if typeof(layer_data) == TYPE_INT:
-					# Error happened
-					return layer_data
-			else:
-				layer_data = read_base64_layer(layer_data)
-
 		var tilemap = TileMap.new()
 		tilemap.set_name(layer.name)
 		tilemap.cell_size = cell_size
@@ -175,24 +164,48 @@ func make_layer(layer, parent, root, data):
 		tilemap.position = offset + map_pos_offset
 		tilemap.tile_set = tileset
 
-		var count = 0
-		for tile_id in layer_data:
-			var int_id = int(str(tile_id)) & 0xFFFFFFFF
+		var chunks = []
 
-			if int_id == 0:
+		if infinite:
+			chunks = layer.chunks
+		else:
+			chunks = [layer]
+
+		for chunk in chunks:
+			err = validate_chunk(chunk)
+			if err != OK:
+				return err
+
+			var chunk_data = chunk.data
+
+			if "encoding" in layer and layer.encoding == "base64":
+				if "compression" in layer:
+					chunk_data = decompress_layer_data(chunk.data, layer.compression, layer_size)
+					if typeof(chunk_data) == TYPE_INT:
+						# Error happened
+						return chunk_data
+				else:
+					chunk_data = read_base64_layer_data(chunk.data)
+
+			var count = 0
+			for tile_id in chunk_data:
+				var int_id = int(str(tile_id)) & 0xFFFFFFFF
+
+				if int_id == 0:
+					count += 1
+					continue
+
+				var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
+				var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
+				var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
+
+				var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
+
+				var cell_x = chunk.x + (count % int(chunk.width))
+				var cell_y = chunk.y + int(count / chunk.width)
+				tilemap.set_cell(cell_x, cell_y, gid, flipped_h, flipped_v, flipped_d)
+
 				count += 1
-				continue
-
-			var flipped_h = bool(int_id & FLIPPED_HORIZONTALLY_FLAG)
-			var flipped_v = bool(int_id & FLIPPED_VERTICALLY_FLAG)
-			var flipped_d = bool(int_id & FLIPPED_DIAGONALLY_FLAG)
-
-			var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
-
-			var cell_pos = Vector2(count % int(map_size.x), int(count / map_size.x))
-			tilemap.set_cellv(cell_pos, gid, flipped_h, flipped_v, flipped_d)
-
-			count += 1
 
 		if options.save_tiled_properties:
 			set_tiled_properties_as_meta(tilemap, layer)
@@ -830,7 +843,7 @@ func is_convex(vertices):
 
 # Decompress the data of the layer
 # Compression argument is a string, either "gzip" or "zlib"
-func decompress_layer(layer_data, compression, map_size):
+func decompress_layer_data(layer_data, compression, map_size):
 	if compression != "gzip" and compression != "zlib":
 		print_error("Unrecognized compression format: %s" % [compression])
 		return ERR_INVALID_DATA
@@ -843,7 +856,7 @@ func decompress_layer(layer_data, compression, map_size):
 
 # Reads the layer as a base64 data
 # Returns an array of ints as the decoded layer would be
-func read_base64_layer(layer_data):
+func read_base64_layer_data(layer_data):
 	var decoded = Marshalls.base64_to_raw(layer_data)
 	return decode_layer(decoded)
 
@@ -1010,6 +1023,24 @@ func validate_layer(layer):
 			if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
 				print_error("Missing or invalid layer array for group layer.")
 				return ERR_INVALID_DATA
+	return OK
+
+func validate_chunk(chunk):
+	if not "data" in chunk:
+		print_error("Missing data chunk property.")
+		return ERR_INVALID_DATA
+	elif not "height" in chunk or not str(chunk.height).is_valid_integer():
+		print_error("Missing or invalid height chunk property.")
+		return ERR_INVALID_DATA
+	elif not "width" in chunk or not str(chunk.width).is_valid_integer():
+		print_error("Missing or invalid width chunk property.")
+		return ERR_INVALID_DATA
+	elif not "x" in chunk or not str(chunk.x).is_valid_integer():
+		print_error("Missing or invalid x chunk property.")
+		return ERR_INVALID_DATA
+	elif not "y" in chunk or not str(chunk.y).is_valid_integer():
+		print_error("Missing or invalid y chunk property.")
+		return ERR_INVALID_DATA
 	return OK
 
 # Custom function to print error, to centralize the prefix addition
