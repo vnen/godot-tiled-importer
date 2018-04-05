@@ -44,6 +44,8 @@ func read_tmx(path):
 		return ERR_INVALID_DATA
 
 	var data = attributes_to_dict(parser)
+	if not "infinite" in data:
+		data.infinite = false
 	data.type = "map"
 	data.tilesets = []
 	data.layers = []
@@ -74,7 +76,7 @@ func read_tmx(path):
 					data.tilesets.push_back(tileset_data)
 
 			elif parser.get_node_name() == "layer":
-				var layer = parse_tile_layer(parser)
+				var layer = parse_tile_layer(parser, data.infinite)
 				if typeof(layer) != TYPE_DICTIONARY:
 					printerr("Error parsing TMX file '%s'. Invalid tile layer data (around line %i)." % [path, parser.get_current_line()])
 					return ERR_INVALID_DATA
@@ -95,7 +97,7 @@ func read_tmx(path):
 				data.layers.push_back(layer)
 
 			elif parser.get_node_name() == "group":
-				var layer = parse_group_layer(parser)
+				var layer = parse_group_layer(parser, data.infinite)
 				if typeof(layer) != TYPE_DICTIONARY:
 					printerr("Error parsing TMX file '%s'. Invalid group layer data (around line %i)." % [path, parser.get_current_line()])
 					return ERR_INVALID_DATA
@@ -293,10 +295,21 @@ func parse_object(parser):
 
 # Parses a tile layer from the XML and return a dictionary
 # Returns an error code if fails
-func parse_tile_layer(parser):
+func parse_tile_layer(parser, infinite):
 	var err = OK
 	var data = attributes_to_dict(parser)
 	data.type = "tilelayer"
+	if not "x" in data:
+		data.x = 0
+	if not "y" in data:
+		data.y = 0
+	if infinite:
+		data.chunks = []
+	else:
+		data.data = []
+
+	var current_chunk = null
+	var encoding = ""
 
 	if not parser.is_empty():
 		err = parser.read()
@@ -305,6 +318,9 @@ func parse_tile_layer(parser):
 			if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
 				if parser.get_node_name() == "layer":
 					break
+				elif parser.get_node_name() == "chunk":
+					data.chunks.push_back(current_chunk)
+					current_chunk = null
 
 			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
 				if parser.get_node_name() == "data":
@@ -314,22 +330,43 @@ func parse_tile_layer(parser):
 						data.compression = attr.compression
 
 					if "encoding" in attr:
-						parser.read()
-
+						encoding = attr.encoding
 						if attr.encoding != "csv":
 							data.encoding = attr.encoding
-							data.data = parser.get_node_data().strip_edges()
-						else:
-							var csv = parser.get_node_data().split(",", false)
-							data.data = []
 
-							for v in csv:
-								data.data.push_back(int(v.strip_edges()))
-					else:
-						data.data = []
+						if not infinite:
+							err = parser.read()
+							if err != OK:
+								return err
+
+							if attr.encoding != "csv":
+								data.data = parser.get_node_data().strip_edges()
+							else:
+								var csv = parser.get_node_data().split(",", false)
+
+								for v in csv:
+									data.data.push_back(int(v.strip_edges()))
 
 				elif parser.get_node_name() == "tile":
-					data.data.push_back(int(parser.get_named_attribute_value("gid")))
+					var gid = int(parser.get_named_attribute_value_safe("gid"))
+					if infinite:
+						current_chunk.data.push_back(gid)
+					else:
+						data.data.push_back(gid)
+
+				elif parser.get_node_name() == "chunk":
+					current_chunk = attributes_to_dict(parser)
+					current_chunk.data = []
+					if encoding != "":
+						err = parser.read()
+						if err != OK:
+							return err
+						if encoding != "csv":
+							current_chunk.data = parser.get_node_data().strip_edges()
+						else:
+							var csv = parser.get_node_data().split(",", false)
+							for v in csv:
+								current_chunk.data.push_back(int(v.strip_edges()))
 
 				elif parser.get_node_name() == "properties":
 					var prop_data = parse_properties(parser)
@@ -409,7 +446,7 @@ func parse_image_layer(parser):
 
 # Parses a group layer from the XML and return a dictionary
 # Returns an error code if fails
-func parse_group_layer(parser):
+func parse_group_layer(parser, infinite):
 	var err = OK
 	var result = attributes_to_dict(parser)
 	result.type = "group"
@@ -424,7 +461,7 @@ func parse_group_layer(parser):
 					break
 			elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
 				if parser.get_node_name() == "layer":
-					var layer = parse_tile_layer(parser)
+					var layer = parse_tile_layer(parser, infinite)
 					if typeof(layer) != TYPE_DICTIONARY:
 						printerr("Error parsing TMX file. Invalid tile layer data (around line %i)." % [parser.get_current_line()])
 						return ERR_INVALID_DATA
