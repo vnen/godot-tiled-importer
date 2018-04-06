@@ -39,6 +39,12 @@ func get_recognized_extensions():
 func get_save_extension():
 	return "scn"
 
+func get_priority():
+	return 1
+
+func get_import_order():
+	return 100
+
 func get_resource_type():
 	return "PackedScene"
 
