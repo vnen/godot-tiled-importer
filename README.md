@@ -30,6 +30,7 @@ Then enable the plugin on the Project Settings.
 * Orthogonal, isometric, and staggered (odd-indexed only) maps.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
+* Support for one-way collision shapes.
 * Custom import options, such as whether to enable UV clip.
 * Support for image layers.
 * Support for object layers, which are imported as StaticBody2D, Area2D or LightOccluder2D
@@ -75,6 +76,9 @@ import them and fail. Consider putting those files in a folder alongside a
   Tiled ellipse is a perfect circle, a CircleShape2D will be used instead.
 
 * Set the type of the object to `area`, `navigation` or `occluder` to use it as such.
+
+* Set the type of the object to `one-way` to mark it as a one-way shape in Godot
+(both on tile and on object layers).
 
 * Objects in object layer cannot be set as `navigation`.
 

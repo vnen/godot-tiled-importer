@@ -368,6 +368,8 @@ func make_layer(layer, parent, root, data):
 							collision.build_mode = CollisionPolygon2D.BUILD_SOLIDS
 						collision.polygon = points
 
+					collision.one_way_collision = object.type == "one-way"
+
 					if "x" in object:
 						pos.x = float(object.x)
 					if "y" in object:
@@ -604,7 +606,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 						result.tile_set_light_occluder(gid, shape)
 						result.tile_set_occluder_offset(gid, offset)
 					else:
-						result.tile_add_shape(gid, shape, Transform2D(0, offset))
+						result.tile_add_shape(gid, shape, Transform2D(0, offset), object.type == "one-way")
 
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
