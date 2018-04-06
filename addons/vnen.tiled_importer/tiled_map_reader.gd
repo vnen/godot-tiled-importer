@@ -141,9 +141,9 @@ func make_layer(layer, parent, root, data):
 
 	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
 	var visible = bool(layer.visible) if "visible" in layer else true
-	var layer_size = Vector2(int(layer.width), int(layer.height))
 
 	if layer.type == "tilelayer":
+		var layer_size = Vector2(int(layer.width), int(layer.height))
 		var tilemap = TileMap.new()
 		tilemap.set_name(layer.name)
 		tilemap.cell_size = cell_size
@@ -982,15 +982,15 @@ func validate_layer(layer):
 	elif not "name" in layer:
 		print_error("Missing or invalid name layer property.")
 		return ERR_INVALID_DATA
-	elif not "height" in layer or not str(layer.height).is_valid_integer():
-		print_error("Missing or invalid layer height property.")
-		return ERR_INVALID_DATA
-	elif not "width" in layer or not str(layer.width).is_valid_integer():
-		print_error("Missing or invalid layer width property.")
-		return ERR_INVALID_DATA
 	match layer.type:
 		"tilelayer":
-			if not "data" in layer:
+			if not "height" in layer or not str(layer.height).is_valid_integer():
+				print_error("Missing or invalid layer height property.")
+				return ERR_INVALID_DATA
+			elif not "width" in layer or not str(layer.width).is_valid_integer():
+				print_error("Missing or invalid layer width property.")
+				return ERR_INVALID_DATA
+			elif not "data" in layer:
 				if not "chunks" in layer:
 					print_error("Missing data or chunks layer properties.")
 					return ERR_INVALID_DATA
@@ -1001,7 +1001,7 @@ func validate_layer(layer):
 				if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
 					print_error("Invalid data layer property.")
 					return ERR_INVALID_DATA
-				elif typeof(layer.data) != TYPE_ARRAY:
+				if layer.encoding != "base64" and typeof(layer.data) != TYPE_ARRAY:
 					print_error("Invalid data layer property.")
 					return ERR_INVALID_DATA
 			elif typeof(layer.data) != TYPE_ARRAY:
