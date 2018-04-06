@@ -766,11 +766,20 @@ func shape_from_object(object):
 			shape.polygon = vertices
 			shape.closed = "polygon" in object
 		else:
-			shape = ConvexPolygonShape2D.new()
 			if is_convex(vertices):
 				var sorter = PolygonSorter.new()
 				vertices = sorter.sort_polygon(vertices)
-			shape.points = vertices
+				shape = ConvexPolygonShape2D.new()
+				shape.points = vertices
+			else:
+				shape = ConcavePolygonShape2D.new()
+				var segments = [vertices[0]]
+				for x in range(1, vertices.size()):
+					segments.push_back(vertices[x])
+					segments.push_back(vertices[x])
+				segments.push_back(vertices[0])
+				shape.segments = PoolVector2Array(segments)
+
 	elif "ellipse" in object:
 		if object.type == "navigation" or object.type == "occluder":
 			print_error("Ellipse shapes are not supported as navigation or occluder. Use polygon/polyline instead.")
