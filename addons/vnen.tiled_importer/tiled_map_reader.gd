@@ -974,17 +974,24 @@ func validate_tileset(tileset):
 	elif not "tilecount" in tileset or not str(tileset.tilecount).is_valid_integer():
 		print_error("Missing or invalid tilecount tileset property.")
 		return ERR_INVALID_DATA
-	elif not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
-		print_error("Missing or invalid imagewidth tileset property.")
-		return ERR_INVALID_DATA
-	elif not "imageheight" in tileset or not str(tileset.imageheight).is_valid_integer():
-		print_error("Missing or invalid imageheight tileset property.")
-		return ERR_INVALID_DATA
 	if not "image" in tileset:
 		for tile in tileset.tiles:
 			if not "image" in tileset.tiles[tile]:
 				print_error("Missing or invalid image in tileset property.")
 				return ERR_INVALID_DATA
+			elif not "imagewidth" in tileset.tiles[tile] or not str(tileset.tiles[tile].imagewidth).is_valid_integer():
+				print_error("Missing or invalid imagewidth tileset property 1.")
+				return ERR_INVALID_DATA
+			elif not "imageheight" in tileset.tiles[tile] or not str(tileset.tiles[tile].imageheight).is_valid_integer():
+				print_error("Missing or invalid imageheight tileset property.")
+				return ERR_INVALID_DATA
+	else:
+		if not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
+			print_error("Missing or invalid imagewidth tileset property 2.")
+			return ERR_INVALID_DATA
+		elif not "imageheight" in tileset or not str(tileset.imageheight).is_valid_integer():
+			print_error("Missing or invalid imageheight tileset property.")
+			return ERR_INVALID_DATA
 	return OK
 
 # Validates the layer dictionary content for missing or invalid keys
