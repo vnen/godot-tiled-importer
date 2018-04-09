@@ -173,3 +173,5 @@ return the changed scene (or TileSet).
 ## License
 
 [MIT License](LICENSE). Copyright (c) 2018 George Marques.
+
+If you like this plugin, consider buying me a (maybe monthly) beer on https://liberapay.com/vnen
