@@ -571,7 +571,8 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			if has_global_image:
 				result.tile_set_texture(gid, image)
 				result.tile_set_region(gid, region)
-				result.tile_set_texture_offset(gid, Vector2(0, -tilesize.y))
+				if options.apply_offset:
+					result.tile_set_texture_offset(gid, Vector2(0, -tilesize.y))
 			elif not rel_id in ts.tiles:
 				gid += 1
 				continue
@@ -582,7 +583,8 @@ func build_tileset_for_scene(tilesets, source_path, options):
 					# Error happened
 					return image
 				result.tile_set_texture(gid, image)
-				result.tile_set_texture_offset(gid, Vector2(0, -image.get_height()))
+				if options.apply_offset:
+					result.tile_set_texture_offset(gid, Vector2(0, -image.get_height()))
 
 			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
 					and "objects" in ts.tiles[rel_id].objectgroup:
@@ -595,7 +597,8 @@ func build_tileset_for_scene(tilesets, source_path, options):
 						return shape
 
 					var offset = Vector2(float(object.x), float(object.y))
-					offset += result.tile_get_texture_offset(gid)
+					if options.apply_offset:
+						offset += result.tile_get_texture_offset(gid)
 					if "width" in object and "height" in object:
 						offset += Vector2(float(object.width) / 2, float(object.height) / 2)
 
