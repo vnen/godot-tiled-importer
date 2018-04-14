@@ -266,6 +266,9 @@ func parse_object(parser):
 					data["properties"] = prop_data.properties
 					data["propertytypes"] = prop_data.propertytypes
 
+				elif parser.get_node_name() == "point":
+					data.point = true
+
 				elif parser.get_node_name() == "ellipse":
 					data.ellipse = true
 
