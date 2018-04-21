@@ -42,6 +42,7 @@ const error_prefix = "Tiled Importer: "
 const whitelist_properties = [
 	"compression",
 	"draworder",
+	"gid",
 	"height",
 	"imageheight",
 	"imagewidth",
