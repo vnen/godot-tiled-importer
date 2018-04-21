@@ -401,6 +401,8 @@ func make_layer(layer, parent, root, data):
 				var tile_id = tile_raw_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 
 				var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
+				var collisions = tileset.tile_get_shape_count(tile_id)
+				var has_collisions = collisions > 0 && object.type != "sprite"
 				var sprite = Sprite.new()
 				var pos = Vector2()
 				var rot = 0
@@ -433,17 +435,41 @@ func make_layer(layer, parent, root, data):
 					if "height" in object and float(object.height) != texture_size.y:
 						scale.y = float(object.height) / texture_size.y
 
-				sprite.position = pos
-				sprite.rotation_degrees = rot
-				sprite.visible = bool(object.visible) if "visible" in object else true
-				sprite.region_filter_clip = options.uv_clip
-				sprite.scale = scale
+				var obj_root = sprite
+				if has_collisions:
+					match object.type:
+						"area": obj_root = Area2D.new()
+						"kinematic": obj_root = KinematicBody2D.new()
+						"rigid": obj_root = RigidBody2D.new()
+						_: obj_root = StaticBody2D.new()
+
+					object_layer.add_child(obj_root)
+					obj_root.owner = root
+
+					obj_root.add_child(sprite)
+					sprite.owner = root
+
+					var shapes = tileset.tile_get_shapes(tile_id)
+					for s in shapes:
+						var collision_node = CollisionShape2D.new()
+						collision_node.shape = s.shape
+
+						collision_node.transform = s.shape_transform
+						obj_root.add_child(collision_node)
+						collision_node.owner = root
+
+				obj_root.position = pos
+				obj_root.rotation_degrees = rot
+				obj_root.visible = bool(object.visible) if "visible" in object else true
+				obj_root.scale = scale
 				# Translate from Tiled bottom-left position to Godot top-left
 				sprite.centered = false
+				sprite.region_filter_clip = options.uv_clip
 				sprite.offset = Vector2(0, -texture_size.y)
 
-				object_layer.add_child(sprite)
-				sprite.set_owner(root)
+				if not has_collisions:
+					object_layer.add_child(sprite)
+					sprite.set_owner(root)
 
 				if options.save_tiled_properties:
 					set_tiled_properties_as_meta(sprite, object)
@@ -452,8 +478,8 @@ func make_layer(layer, parent, root, data):
 						var tile_meta = tileset.get_meta("tile_meta")
 						if typeof(tile_meta) == TYPE_DICTIONARY and tile_id in tile_meta:
 							for prop in tile_meta[tile_id]:
-								sprite.set_meta(prop, tile_meta[tile_id][prop])
-					set_custom_properties(sprite, object)
+								obj_root.set_meta(prop, tile_meta[tile_id][prop])
+					set_custom_properties(obj_root, object)
 
 	elif layer.type == "group":
 		var group = Node2D.new()
