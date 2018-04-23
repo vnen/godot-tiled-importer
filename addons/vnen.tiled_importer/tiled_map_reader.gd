@@ -155,6 +155,7 @@ func make_layer(layer, parent, root, data):
 		tilemap.cell_clip_uv = options.uv_clip
 		tilemap.cell_y_sort = true
 		tilemap.cell_tile_origin = TileMap.TILE_ORIGIN_BOTTOM_LEFT
+		tilemap.collision_layer = options.collision_layer
 
 		var offset = Vector2()
 		if "offsetx" in layer:
