@@ -416,11 +416,6 @@ func make_layer(layer, parent, root, data):
 					sprite.region_rect = tileset.tile_get_region(tile_id)
 					texture_size = tileset.tile_get_region(tile_id).size
 
-				if "name" in object and not str(object.name).empty():
-					sprite.set_name(str(object.name))
-				elif "id" in object and not str(object.id).empty():
-					sprite.set_name(str(object.id))
-
 				sprite.flip_h = bool(tile_raw_id & FLIPPED_HORIZONTALLY_FLAG)
 				sprite.flip_v = bool(tile_raw_id & FLIPPED_VERTICALLY_FLAG)
 
@@ -459,6 +454,11 @@ func make_layer(layer, parent, root, data):
 						obj_root.add_child(collision_node)
 						collision_node.owner = root
 
+				if "name" in object and not str(object.name).empty():
+					obj_root.set_name(str(object.name))
+				elif "id" in object and not str(object.id).empty():
+					obj_root.set_name(str(object.id))
+
 				obj_root.position = pos
 				obj_root.rotation_degrees = rot
 				obj_root.visible = bool(object.visible) if "visible" in object else true
@@ -473,7 +473,7 @@ func make_layer(layer, parent, root, data):
 					sprite.set_owner(root)
 
 				if options.save_tiled_properties:
-					set_tiled_properties_as_meta(sprite, object)
+					set_tiled_properties_as_meta(obj_root, object)
 				if options.custom_properties:
 					if options.tile_metadata:
 						var tile_meta = tileset.get_meta("tile_meta")
