@@ -79,6 +79,7 @@ func build(source_path, options):
 	var map_mode = TileMap.MODE_SQUARE
 	var map_offset = TileMap.HALF_OFFSET_DISABLED
 	var map_pos_offset = Vector2()
+	var cell_offset = Vector2()
 	if "orientation" in map:
 		match map.orientation:
 			"isometric":
@@ -92,8 +93,23 @@ func build(source_path, options):
 					"y":
 						map_offset = TileMap.HALF_OFFSET_X
 						cell_size.y /= 2.0
-
-			# TODO: hexagonal orientation
+			"hexagonal":
+				# Godot maps are always odd and don't have an "even" setting. To
+				# imitate even staggering we simply start one row/column late and
+				# adjust the position of the whole map.
+				match map.staggeraxis:
+					"x":
+						map_offset = TileMap.HALF_OFFSET_Y
+						cell_size.x = int((cell_size.x + map.hexsidelength) / 2)
+						if map.staggerindex == "even":
+							cell_offset.x += 1
+							map_pos_offset.x -= cell_size.x
+					"y":
+						map_offset = TileMap.HALF_OFFSET_X
+						cell_size.y = int((cell_size.y + map.hexsidelength) / 2)
+						if map.staggerindex == "even":
+							cell_offset.y += 1
+							map_pos_offset.y -= cell_size.y
 
 	var tileset = build_tileset_for_scene(map.tilesets, source_path, options)
 	if typeof(tileset) != TYPE_OBJECT:
@@ -113,6 +129,7 @@ func build(source_path, options):
 		"map_offset": map_offset,
 		"map_pos_offset": map_pos_offset,
 		"cell_size": cell_size,
+		"cell_offset": cell_offset,
 		"tileset": tileset,
 		"source_path": source_path,
 		"infinite": bool(map.infinite) if "infinite" in map else false
@@ -135,6 +152,7 @@ func make_layer(layer, parent, root, data):
 	var map_offset = data.map_offset
 	var map_pos_offset = data.map_pos_offset
 	var cell_size = data.cell_size
+	var cell_offset = data.cell_offset
 	var options = data.options
 	var tileset = data.tileset
 	var source_path = data.source_path
@@ -202,8 +220,8 @@ func make_layer(layer, parent, root, data):
 
 				var gid = int_id & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
 
-				var cell_x = chunk.x + (count % int(chunk.width))
-				var cell_y = chunk.y + int(count / chunk.width)
+				var cell_x = cell_offset.x + chunk.x + (count % int(chunk.width))
+				var cell_y = cell_offset.y + chunk.y + int(count / chunk.width)
 				tilemap.set_cell(cell_x, cell_y, gid, flipped_h, flipped_v, flipped_d)
 
 				count += 1
