@@ -77,6 +77,11 @@ func get_import_options(preset):
 			"hint_string": "Mipmaps,Repeat,Filter,Anisotropic,sRGB,Mirrored Repeat"
 		},
 		{
+			"name": "collision_layer",
+			"default_value": 1,
+			"property_hint": PROPERTY_HINT_LAYERS_2D_PHYSICS
+		},
+		{
 			"name": "embed_internal_images",
 			"default_value": true if preset == PRESET_PIXEL_ART else false
 		},
