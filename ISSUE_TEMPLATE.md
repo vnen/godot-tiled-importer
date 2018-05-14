@@ -9,4 +9,4 @@
 <!-- The less the better, but don't skip steps -->
 
 **Sample map or tileset**
-<!-- Small file (or files) from Tiled which causes the issue. Can be in XML format (.tmx or .tsx) or JSON -->
+<!-- Upload a ZIP file to the issue. It should contain a small file (or files) from Tiled which causes the issue. Can be in XML format (.tmx or .tsx) or JSON. -->
