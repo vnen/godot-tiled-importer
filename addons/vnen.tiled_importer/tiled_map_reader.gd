@@ -90,9 +90,15 @@ func build(source_path, options):
 					"x":
 						map_offset = TileMap.HALF_OFFSET_Y
 						cell_size.x /= 2.0
+						if map.staggerindex == "even":
+							cell_offset.x += 1
+							map_pos_offset.x -= cell_size.x
 					"y":
 						map_offset = TileMap.HALF_OFFSET_X
 						cell_size.y /= 2.0
+						if map.staggerindex == "even":
+							cell_offset.y += 1
+							map_pos_offset.y -= cell_size.y
 			"hexagonal":
 				# Godot maps are always odd and don't have an "even" setting. To
 				# imitate even staggering we simply start one row/column late and
