@@ -216,6 +216,8 @@ func parse_tile_data(parser):
 					printerr("Error loading image tag. No source attribute found (around line %i)." % [parser.get_current_line()])
 					return ERR_INVALID_DATA
 				data.image = attr.source
+				data.imagewidth = attr.width
+				data.imageheight = attr.height
 
 			elif parser.get_node_name() == "objectgroup":
 				obj_group = attributes_to_dict(parser)
