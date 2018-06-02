@@ -27,7 +27,7 @@ Then enable the plugin on the Project Settings.
 * Both `.tsx` (XML) and `.json` formats for tilesets.
 * Support for Base64 encoded map.
 * Support for layer compression, both `zlib` and `gzip` are supported.
-* Orthogonal, isometric, and staggered (odd-indexed only) maps.
+* Orthogonal, isometric, staggered, and hexagonal maps.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
 * Support for one-way collision shapes.
@@ -55,10 +55,10 @@ update it in the editor if it's open.
 If the file can't be imported, an error message will be generated in the output.
 Please check the output if you are having an issue.
 
-Note that if you are using external tilesets, note that they will also be imported,
-which may increase the final export size of your project. To mitigate that, you can
-exclude those files from the export or put them in a folder alongside a `.gdignore`
-file so they are not even imported.
+Note that if you are using external tilesets, they will also be imported, which may
+increase the final export size of your project. To mitigate that, you can exclude
+those files from the export or put them in a folder alongside a `.gdignore` file so
+they are not even imported.
 
 **Note:** If you have other `.json` files in your project, this plugin will try to
 import them and fail. There's an option in the Project Settings to disable the JSON
@@ -68,10 +68,8 @@ to import them.
 
 ## Caveats on Tiled maps
 
-* Godot TileSets only have on collision shape, so the last found will overwrite
-  the others.
-
-* The same goes for navigation/occluder polygons.
+* Godot TileSets only have one navigation and one occluder per tile, so the last found
+  will overwrite the others.
 
 * There's no Ellipse shape in Godot. If you use it as a collision object, it
   will be converted to a capsule shape, which may be imprecise. However, if the
@@ -91,13 +89,12 @@ to import them.
 * Occluder shapes are set as closed if a polygon is used and as open if it is
   a polyline.
 
-* For isometric staggered maps, only odd-indexed is supported. For even-indexed
-it would require some extra tricks during import. This may be available in the
-future.
+* For isometric maps, the collision shapes and objects likely will be out of place,
+  because Tiled applies the isometric transform to everything.
 
 ## Import system caveats
 
-* If you are embedding images, changing them won't trigger a reimport.
+* If you are embedding images, changing them won't trigger a reimport of the map.
 
 * If you are using external tile sets in Tiled, changing the tile set won't
 trigger a reimport.
