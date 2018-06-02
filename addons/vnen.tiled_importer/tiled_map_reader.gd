@@ -164,7 +164,7 @@ func make_layer(layer, parent, root, data):
 	if layer.type == "tilelayer":
 		var layer_size = Vector2(int(layer.width), int(layer.height))
 		var tilemap = TileMap.new()
-		tilemap.set_name(layer.name)
+		tilemap.set_name(str(layer.name))
 		tilemap.cell_size = cell_size
 		tilemap.modulate = Color(1.0, 1.0, 1.0, opacity);
 		tilemap.visible = visible
@@ -256,7 +256,7 @@ func make_layer(layer, parent, root, data):
 			offset.y = float(layer.offsety)
 
 		var sprite = Sprite.new()
-		sprite.set_name(layer.name)
+		sprite.set_name(str(layer.name))
 		sprite.centered = false
 		sprite.texture = image
 		sprite.visible = visible
@@ -281,8 +281,8 @@ func make_layer(layer, parent, root, data):
 		object_layer.set("editor/display_folded", true)
 		parent.add_child(object_layer)
 		object_layer.set_owner(root)
-		if "name" in layer and not layer.name.empty():
-			object_layer.set_name(layer.name)
+		if "name" in layer and not str(layer.name).empty():
+			object_layer.set_name(str(layer.name))
 
 		if not "draworder" in layer or layer.draworder == "topdown":
 			layer.objects.sort_custom(self, "object_sorter")
@@ -528,7 +528,7 @@ func make_layer(layer, parent, root, data):
 			make_layer(sub_layer, group, root, data)
 
 	else:
-		print_error("Unknown layer type ('%s') in '%s'" % [layer.type, layer.name if "name" in layer else "[unnamed layer]"])
+		print_error("Unknown layer type ('%s') in '%s'" % [str(layer.type), str(layer.name) if "name" in layer else "[unnamed layer]"])
 		return ERR_INVALID_DATA
 
 	return OK
@@ -676,7 +676,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 				column = 0
 
 		if str(ts.name) != "":
-			result.resource_name = ts.name
+			result.resource_name = str(ts.name)
 
 		if options.save_tiled_properties:
 			set_tiled_properties_as_meta(result, ts)
