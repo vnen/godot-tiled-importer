@@ -487,7 +487,7 @@ func parse_group_layer(parser, infinite):
 					result.layers.push_back(layer)
 
 				elif parser.get_node_name() == "group":
-					var layer = parse_group_layer(parser)
+					var layer = parse_group_layer(parser, infinite)
 					if typeof(layer) != TYPE_DICTIONARY:
 						printerr("Error parsing TMX file. Invalid group layer data (around line %i)." % [parser.get_current_line()])
 						return ERR_INVALID_DATA
