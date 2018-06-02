@@ -61,8 +61,10 @@ exclude those files from the export or put them in a folder alongside a `.gdigno
 file so they are not even imported.
 
 **Note:** If you have other `.json` files in your project, this plugin will try to
-import them and fail. Consider putting those files in a folder alongside a
-`.gdignore` file so Godot won't try to import them.
+import them and fail. There's an option in the Project Settings to disable the JSON
+format and avoid this. If you need to use JSON format for Tiled files, consider putting
+the non-Tiled JSON files in a folder alongside a `.gdignore` file so Godot won't try
+to import them.
 
 ## Caveats on Tiled maps
 
@@ -114,6 +116,10 @@ otherwise it won't make a difference. If you want to avoid that, use the Default
 preset and import your images without flags.
 
 Note that you can set a different default preset on Godot.
+
+**In the Project Settings, there's a `Tiled Importer` section with settings related
+to this plugin.** Currently it's only used so you can disable the JSON format if
+needed.
 
 ### Custom Properties
 

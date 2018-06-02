@@ -34,7 +34,10 @@ func get_visible_name():
 	return "TileSet from Tiled"
 
 func get_recognized_extensions():
-	return ["json", "tsx"]
+	if ProjectSettings.get_setting("tiled_importer/enable_json_format"):
+		return ["json", "tmx"]
+	else:
+		return ["tmx"]
 
 func get_save_extension():
 	return "res"

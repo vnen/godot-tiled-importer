@@ -30,6 +30,9 @@ func get_name():
 	return "Tiled Map Importer"
 
 func _enter_tree():
+	if not ProjectSettings.has_setting("tiled_importer/enable_json_format"):
+		ProjectSettings.set_setting("tiled_importer/enable_json_format", true)
+
 	import_plugin = preload("tiled_import_plugin.gd").new()
 	tileset_import_plugin = preload("tiled_tileset_import_plugin.gd").new()
 	add_import_plugin(import_plugin)
