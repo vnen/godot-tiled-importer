@@ -476,6 +476,14 @@ func make_layer(layer, parent, root, data):
 						collision_node.shape = s.shape
 
 						collision_node.transform = s.shape_transform
+						if sprite.flip_h:
+							collision_node.position.x *= -1
+							collision_node.position.x -= cell_size.x
+							collision_node.scale.x *= -1
+						if sprite.flip_v:
+							collision_node.scale.y *= -1
+							collision_node.position.y *= -1
+							collision_node.position.y -= cell_size.y
 						obj_root.add_child(collision_node)
 						collision_node.owner = root
 
