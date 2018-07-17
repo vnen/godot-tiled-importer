@@ -62,9 +62,19 @@ const whitelist_properties = [
 	"width"
 ]
 
+# All templates loaded, can be looked up by path name
+var _loaded_templates = {}
+# Maps each tileset file used by the map to it's first gid; Used for template parsing
+var _tileset_path_to_first_gid = {}
+
+func reset_global_memebers():
+	_loaded_templates = {}
+	_tileset_path_to_first_gid = {}
+
 # Main function
 # Reads a source file and gives back a scene
 func build(source_path, options):
+	reset_global_memebers()
 	var map = read_file(source_path)
 	if typeof(map) == TYPE_INT:
 		return map
@@ -294,6 +304,19 @@ func make_layer(layer, parent, root, data):
 			layer.objects.sort_custom(self, "object_sorter")
 
 		for object in layer.objects:
+			if "template" in object:
+				var template_file = object["template"]
+				var template_data_immutable = get_template(remove_filename_from_path(data["source_path"]) + template_file)
+				if typeof(template_data_immutable) != TYPE_DICTIONARY:
+					# Error happened
+					print("Error getting template for object with id " + str(data["id"]))
+					continue
+
+				# Overwrite template data with current object data
+				apply_template(object, template_data_immutable)
+
+				set_default_obj_params(object)
+
 			if "point" in object and object.point:
 				var point = Position2D.new()
 				if not "x" in object or not "y" in object:
@@ -547,6 +570,16 @@ func make_layer(layer, parent, root, data):
 
 	return OK
 
+func set_default_obj_params(object):
+	# Set default values for object
+	for attr in ["width", "height", "rotation", "x", "y"]:
+		if not attr in object:
+			object[attr] = 0
+	if not "type" in object:
+		object.type = ""
+	if not "visible" in object:
+		object.visible = true
+
 # Makes a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
 func build_tileset_for_scene(tilesets, source_path, options):
@@ -563,6 +596,8 @@ func build_tileset_for_scene(tilesets, source_path, options):
 				return ERR_INVALID_DATA
 
 			ts_source_path = source_path.get_base_dir().plus_file(ts.source)
+			# Used later for templates
+			_tileset_path_to_first_gid[ts_source_path] = tileset.firstgid
 
 			if ts.source.get_extension().to_lower() == "tsx":
 				var tsx_reader = TiledXMLToDictionary.new()
@@ -808,6 +843,7 @@ func read_tileset_file(path):
 # Returns a valid shape depending on the object type (collision/occluder/navigation)
 func shape_from_object(object):
 	var shape = ERR_INVALID_DATA
+	set_default_obj_params(object)
 
 	if "polygon" in object or "polyline" in object:
 		var vertices = PoolVector2Array()
@@ -1127,3 +1163,132 @@ func validate_chunk(chunk):
 # Custom function to print error, to centralize the prefix addition
 func print_error(err):
 	printerr(error_prefix + err)
+
+func get_template(path):
+	# If this template has not yet been loaded
+	if not _loaded_templates.has(path):
+		# IS XML
+		if path.get_extension().to_lower() == "tx":
+			var parser = XMLParser.new()
+			var err = parser.open(path)
+			if err != OK:
+				print_error("Error opening TX file '%s'." % [path])
+				return err
+			var content = parse_template(parser, path)
+			if typeof(content) != TYPE_DICTIONARY:
+				# Error happened
+				print_error("Error parsing template map file '%s'." % [path])
+				return false
+			_loaded_templates[path] = content
+
+		# IS JSON
+		else:
+			var file = File.new()
+			var err = file.open(path, File.READ)
+			if err != OK:
+				return err
+
+			var json_res = JSON.parse(file.get_as_text())
+			if json_res.error != OK:
+				print_error("Error parsing JSON template map file '%s'." % [path])
+				return json_res.error
+
+			var result = json_res.result
+			if typeof(result) != TYPE_DICTIONARY:
+				print_error("Error parsing JSON template map file '%s'." % [path])
+				return ERR_INVALID_DATA
+
+			var object = result.object
+			if object.has("gid"):
+				if result.has("tileset"):
+					var ts_path = remove_filename_from_path(path) + result.tileset.source
+					var tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
+					object.gid += tileset_gid_increment
+
+			_loaded_templates[path] = object
+
+	var dict = _loaded_templates[path]
+	var dictCopy = {}
+	for k in dict:
+		dictCopy[k] = dict[k]
+
+	return dictCopy
+
+func parse_template(parser, path):
+	var err = OK
+	# Template root node shouldn't have attributes
+	var data = {}
+	var tileset_gid_increment = 0
+	data.id = 0
+
+	err = parser.read()
+	while err == OK:
+		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+			if parser.get_node_name() == "template":
+				break
+
+		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
+			if parser.get_node_name() == "tileset":
+				var ts_path = remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
+				tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
+				data.tileset = ts_path
+
+			if parser.get_node_name() == "object":
+				var object = TiledXMLToDictionary.parse_object(parser)
+				for k in object:
+					data[k] = object[k]
+
+		err = parser.read()
+
+	if data.has("gid"):
+		data["gid"] += tileset_gid_increment
+
+	return data
+
+func get_first_gid_from_tileset_path(path):
+	for t in _tileset_path_to_first_gid:
+		if is_same_file(path, t):
+			return _tileset_path_to_first_gid[t]
+
+	return 0
+
+static func get_filename_from_path(path):
+	var substrings = path.split("/", false)
+	var file_name = substrings[substrings.size() - 1]
+	return file_name
+
+static func remove_filename_from_path(path):
+	var file_name = get_filename_from_path(path)
+	var stringSize = path.length() - file_name.length()
+	var file_path = path.substr(0,stringSize)
+	return file_path
+
+static func is_same_file(path1, path2):
+	var file1 = File.new()
+	var err = file1.open(path1, File.READ)
+	if err != OK:
+		return err
+
+	var file2 = File.new()
+	err = file2.open(path2, File.READ)
+	if err != OK:
+		return err
+
+	var file1_str = file1.get_as_text()
+	var file2_str = file2.get_as_text()
+
+	if file1_str == file2_str:
+		return true
+
+	return false
+
+static func apply_template(object, template_immutable):
+	for k in template_immutable:
+		# Do not overwrite any object data
+		if typeof(template_immutable[k]) == TYPE_DICTIONARY:
+			if not object.has(k):
+				object[k] = {}
+			apply_template(object[k], template_immutable[k])
+
+		elif not object.has(k):
+			object[k] = template_immutable[k]
