@@ -40,6 +40,7 @@ const error_prefix = "Tiled Importer: "
 
 # Properties to save the value in the metadata
 const whitelist_properties = [
+	"backgroundcolor",
 	"compression",
 	"draworder",
 	"gid",
@@ -59,7 +60,7 @@ const whitelist_properties = [
 	"type",
 	"version",
 	"visible",
-	"width"
+	"width",
 ]
 
 # All templates loaded, can be looked up by path name
@@ -89,6 +90,7 @@ func build(source_path, options):
 	var map_mode = TileMap.MODE_SQUARE
 	var map_offset = TileMap.HALF_OFFSET_DISABLED
 	var map_pos_offset = Vector2()
+	var map_background = Color()
 	var cell_offset = Vector2()
 	if "orientation" in map:
 		match map.orientation:
@@ -144,6 +146,7 @@ func build(source_path, options):
 		"map_mode": map_mode,
 		"map_offset": map_offset,
 		"map_pos_offset": map_pos_offset,
+		"map_background": map_background,
 		"cell_size": cell_size,
 		"cell_offset": cell_offset,
 		"tileset": tileset,
@@ -152,7 +155,38 @@ func build(source_path, options):
 	}
 
 	for layer in map.layers:
-		make_layer(layer, root, root, map_data)
+		err = make_layer(layer, root, root, map_data)
+		if err != OK:
+			return err
+
+	if options.add_background and "backgroundcolor" in map:
+		var bg_color = str(map.backgroundcolor)
+		if (!bg_color.is_valid_html_color()):
+			print_error("Invalid background color format: " + bg_color)
+			return root
+
+		map_background = Color(bg_color)
+
+		var viewport_size = Vector2(ProjectSettings.get("display/window/size/width"), ProjectSettings.get("display/window/size/height"))
+		var parbg = ParallaxBackground.new()
+		var parlayer = ParallaxLayer.new()
+		var colorizer = ColorRect.new()
+
+		parbg.scroll_ignore_camera_zoom = true
+		parlayer.motion_mirroring = viewport_size
+		colorizer.color = map_background
+		colorizer.rect_size = viewport_size
+		colorizer.rect_min_size = viewport_size
+
+		parbg.name = "Background"
+		root.add_child(parbg)
+		parbg.owner = root
+		parlayer.name = "BackgroundLayer"
+		parbg.add_child(parlayer)
+		parlayer.owner = root
+		colorizer.name = "BackgroundColor"
+		parlayer.add_child(colorizer)
+		colorizer.owner = root
 
 	return root
 
