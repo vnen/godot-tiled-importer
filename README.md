@@ -5,6 +5,9 @@ This is a plugin for [Godot Engine](https://godotengine.org) to import
 
 **Note: This is compatible only with Godot 3.0 or later. For Godot 2.x, use the [1.x branch](https://github.com/vnen/godot-tiled-importer/tree/1.x).**
 
+[![ko-fi](https://www.ko-fi.com/img/donate_sm.png)](https://ko-fi.com/P5P1GZ0P)
+If you like what I do, please consider buying me a coffee on [Ko-fi](https://ko-fi.com/georgemarques).
+
 <img src="https://user-images.githubusercontent.com/5599796/35366974-29dd3a98-0163-11e8-844b-fcae103b3aa6.png" width="300">
 <img src="https://user-images.githubusercontent.com/5599796/35366991-33a8acf6-0163-11e8-8515-1d457bf68d2b.png" width="300">
 <img src="https://user-images.githubusercontent.com/5599796/35366983-2d69967a-0163-11e8-87e1-32a2b26a76e8.png" width="300">
@@ -27,6 +30,7 @@ Then enable the plugin on the Project Settings.
 * Both `.tsx` (XML) and `.json` formats for tilesets.
 * Support for Base64 encoded map.
 * Support for layer compression, both `zlib` and `gzip` are supported.
+* Object templates.
 * Orthogonal, isometric, staggered, and hexagonal maps.
 * Import visibility and opacity from layers.
 * Import collision/occluder/navigation shapes (based on Tiled object type).
@@ -38,6 +42,7 @@ Then enable the plugin on the Project Settings.
 * Support for group layers, which are imported as `Node2D`s.
 * Custom properties for maps, layers, tilesets, and objects are imported as
   metadata. Custom properties on tiles can be imported into the TileSet resource.
+* Map background imported as a parallax background (so it's virtually infinite)
 * Support for post-import script.
 
 ## Usage (once the plugin is enabled)
@@ -100,7 +105,8 @@ to import them.
 trigger a reimport.
 
 * Essentially, every change you do that doesn't directly change the source Tiled
-map, won't trigger the automatic reimport.
+map, won't trigger the automatic reimport. In this case you can manually reimport
+if needed.
 
 ## Options (Maps and TileSets)
 
@@ -132,7 +138,7 @@ Whether or not to save the tile metadata into the TileSet resource. It will be s
 as a dictionary named `tile_meta` where the key is the tile global id (the same id
 used in the Godot TileMap).
 
-### Clip Uv (Map only)
+### Uv Clip (Map only)
 
 **Default: `On`**
 
@@ -144,6 +150,13 @@ Enable the Clip Uv (Filter Clip on Sprites) to avoid image bleeding on tiles.
 
 The image flags to apply to all imported TileSet images. This will only work if images
 are embedded, otherwise they will use the flags from their own import settings.
+
+### Collision Layer (Map only)
+
+**Default: `1`**
+
+The collision layer for the maps and objects imported. If you need custom layers for
+each object, consider using a post-import script.
 
 ### Embed Internal Images
 
@@ -163,6 +176,21 @@ placed alongside the custom properties.
 **Note:** Not *all* properties from the file are saved, only the ones you can see on
 Tiled interface.
 
+### Add Background (Map only)
+
+**Default: `On`**
+
+Add a parallax background to make the map background color from Tiled. This option is
+irrelevant if there's no map background color defined in the Tiled map.
+
+### Apply Offset (Tileset only)
+
+**Default `Off`**
+
+Tilesets on Tiled use the bottom-left as origin, while Godot uses top-left. This option
+applies an offset to the tileset to make this consistent. It is applied by default on maps
+to sort out the positioning of everything, but for Tileset importing this is optional.
+
 ### Post-import script
 
 **Default: `None`**
@@ -176,5 +204,3 @@ return the changed scene (or TileSet).
 ## License
 
 [MIT License](LICENSE). Copyright (c) 2018 George Marques.
-
-If you like this plugin, consider buying me a (maybe monthly) beer on https://liberapay.com/vnen
