@@ -18,5 +18,5 @@ In chronological order based on the first contribution.
 - [Christian Flach (cmfcmf)](https://github.com/cmfcmf)
 - [Fahd El Ouataoui (elouataoui)](https://github.com/elouataoui)
 - [Ross Hadden (rosshadden)](https://github.com/rosshadden)
-- [Tim van Oosterhout (Tubeliar)](https://github.com/Tubeliar]
+- [Tim van Oosterhout (Tubeliar)](https://github.com/Tubeliar)
 - [SirRamEsq](https://github.com/SirRamEsq)
