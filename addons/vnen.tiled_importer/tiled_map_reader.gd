@@ -765,7 +765,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			set_tiled_properties_as_meta(result, ts)
 		if options.custom_properties:
 			if "properties" in ts and "propertytypes" in ts:
-				set_custom_properties(result, ts.properties, ts.propertytypes)
+				set_custom_properties(result, ts)
 
 	if options.custom_properties and options.tile_metadata:
 		result.set_meta("tile_meta", tile_meta)
@@ -843,7 +843,7 @@ func read_file(path):
 
 	var content = JSON.parse(file.get_as_text())
 	if content.error != OK:
-		print_error("Error parsing JSON: ", content.error_string)
+		print_error("Error parsing JSON: " + content.error_string)
 		return content.error
 
 	return content.result
@@ -868,7 +868,7 @@ func read_tileset_file(path):
 
 	var content = JSON.parse(file.get_as_text())
 	if content.error != OK:
-		print_error("Error parsing JSON: ", content.error_string)
+		print_error("Error parsing JSON: " + content.error_string)
 		return content.error
 
 	return content.result
