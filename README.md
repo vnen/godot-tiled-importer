@@ -71,6 +71,8 @@ format and avoid this. If you need to use JSON format for Tiled files, consider 
 the non-Tiled JSON files in a folder alongside a `.gdignore` file so Godot won't try
 to import them.
 
+Find more useage information on the [Wiki](https://github.com/vnen/godot-tiled-importer/wiki).
+
 ## Caveats on Tiled maps
 
 * Godot TileSets only have one navigation and one occluder per tile, so the last found
