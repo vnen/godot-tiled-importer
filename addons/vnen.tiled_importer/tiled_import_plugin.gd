@@ -23,7 +23,7 @@
 tool
 extends EditorImportPlugin
 
-enum Preset { PRESET_DEFAULT, PRESET_PIXEL_ART }
+enum { PRESET_DEFAULT, PRESET_PIXEL_ART }
 
 const TiledMapReader = preload("tiled_map_reader.gd")
 
