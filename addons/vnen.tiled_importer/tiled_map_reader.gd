@@ -220,6 +220,7 @@ func make_layer(layer, parent, root, data):
 		tilemap.visible = visible
 		tilemap.mode = map_mode
 		tilemap.cell_half_offset = map_offset
+		tilemap.format = 1
 		tilemap.cell_clip_uv = options.uv_clip
 		tilemap.cell_y_sort = true
 		tilemap.cell_tile_origin = TileMap.TILE_ORIGIN_BOTTOM_LEFT
