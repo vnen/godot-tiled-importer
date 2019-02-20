@@ -486,7 +486,7 @@ func make_layer(layer, parent, root, data):
 
 				var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
 				var collisions = tileset.tile_get_shape_count(tile_id)
-				var has_collisions = collisions > 0 && object.type != "sprite"
+				var has_collisions = collisions > 0 && object.has("type") && object.type != "sprite"
 				var sprite = Sprite.new()
 				var pos = Vector2()
 				var rot = 0
