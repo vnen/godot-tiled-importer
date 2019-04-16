@@ -97,6 +97,12 @@ func get_import_options(preset):
 			"default_value": true
 		},
 		{
+			"name": "custom_root_node",
+			"default_value": "",
+			"property_hint": PROPERTY_HINT_FILE,
+			"hint_string": "*.tscn;PackedScene"
+		},
+		{
 			"name": "post_import_script",
 			"default_value": "",
 			"property_hint": PROPERTY_HINT_FILE,
