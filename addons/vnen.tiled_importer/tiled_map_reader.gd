@@ -814,8 +814,7 @@ func load_image(rel_path, source_path, options):
 
 	var image = null
 	if embed:
-		image = ImageTexture.new()
-		image.load(total_path)
+		image = load(total_path)
 	else:
 		image = ResourceLoader.load(total_path, "ImageTexture")
 
