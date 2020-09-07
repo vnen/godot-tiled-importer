@@ -78,10 +78,6 @@ func get_import_options(preset):
 			"default_value": false
 		},
 		{
-			"name": "apply_offset",
-			"default_value": false
-		},
-		{
 			"name": "post_import_script",
 			"default_value": "",
 			"property_hint": PROPERTY_HINT_FILE,
