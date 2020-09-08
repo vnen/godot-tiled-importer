@@ -110,8 +110,6 @@ func get_option_visibility(option, options):
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var map_reader = TiledMapReader.new()
 
-	# Offset is only optional for importing TileSets
-	options.apply_offset = true
 	var scene = map_reader.build(source_file, options)
 
 	if typeof(scene) != TYPE_OBJECT:
