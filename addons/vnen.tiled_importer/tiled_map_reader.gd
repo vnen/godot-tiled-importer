@@ -50,6 +50,8 @@ const whitelist_properties = [
 	"infinite",
 	"margin",
 	"name",
+	"offsetx",
+	"offsety",
 	"orientation",
 	"probability",
 	"spacing",
