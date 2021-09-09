@@ -1,12 +1,19 @@
-# Tiled Map Importer
+# Tiled Map Importer Improvements
+
+**This fork will contain much more recent changes and features than the original repository - last commit was 3 years ago.**
+
+Modified to be more usable in a with newer features of Tiled and Godot.
+Added animations.
 
 This is a plugin for [Godot Engine](https://godotengine.org) to import
 `TileMap`s and `TileSet`s from the [Tiled Map Editor](http://www.mapeditor.org).
 
-**Note: This is compatible only with Godot 3.0 or later. For Godot 2.x, use the [1.x branch](https://github.com/vnen/godot-tiled-importer/tree/1.x).**
+**Note: This is compatible only with Godot 3.0 or later.**
 
 [![ko-fi](https://www.ko-fi.com/img/donate_sm.png)](https://ko-fi.com/P5P1GZ0P)
-If you like what I do, please consider buying me a coffee on [Ko-fi](https://ko-fi.com/georgemarques).
+Donate to the original author on [Ko-fi](https://ko-fi.com/georgemarques).
+
+If you would like to support this fork, purchase my game, [Indirection](https://store.steampowered.com/app/1744450/Indirection/) on Steam!
 
 <p float="left">
   <img src="https://user-images.githubusercontent.com/5599796/35366974-29dd3a98-0163-11e8-844b-fcae103b3aa6.png" width="400">
@@ -17,19 +24,29 @@ If you like what I do, please consider buying me a coffee on [Ko-fi](https://ko-
   <img src="https://user-images.githubusercontent.com/45643741/148708696-51493ff2-1cea-4924-980d-bf5a77f5bf26.gif" width="400">
   <img src="https://user-images.githubusercontent.com/45643741/148708828-3de261b9-4b56-4f11-bfea-0b6f092fab74.gif" width="400">
 </p>
-
-*The last 2 images are from the game Indirection on Steam. You can check it out [here](https://store.steampowered.com/app/1744450/Indirection/)!*
+![animations](https://user-images.githubusercontent.com/45643741/148709100-9248db23-e66b-4112-a659-8cdf01acfff6.gif)
+![Animations](https://user-images.githubusercontent.com/45643741/148708696-51493ff2-1cea-4924-980d-bf5a77f5bf26.gif)
+![Editor](https://user-images.githubusercontent.com/45643741/148708828-3de261b9-4b56-4f11-bfea-0b6f092fab74.gif)
+<img src="https://user-images.githubusercontent.com/5599796/35366974-29dd3a98-0163-11e8-844b-fcae103b3aa6.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366991-33a8acf6-0163-11e8-8515-1d457bf68d2b.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366983-2d69967a-0163-11e8-87e1-32a2b26a76e8.png" width="300">
+<img src="https://user-images.githubusercontent.com/5599796/35366992-369c0cf0-0163-11e8-8008-b8dad1fb5d7f.png" width="300">
 
 ## Installation
 
-Simply download it from Godot Asset Library: https://godotengine.org/asset-library/asset/158.
-
-Alternatively, download or clone this repository and copy the contents of the
+You can get this plugin on the Godot Asset Store! Look for "Tiled Map Importer - Latest Fork".
+Alternatively, you can download or clone this repository and copy the contents of the
 `addons` folder to your own project's `addons` folder.
 
 Then enable the plugin on the Project Settings.
 
-## Features
+## Fork Additions
+
+* Tile animations.
+* Per-layer z index support.
+* Custom material support.
+
+## Original Features
 
 * Import Tiled file as a Godot scene. Each layer in Tiled is a TileMap in Godot.
 * Import TileSets from Tiled standalone tileset files.
