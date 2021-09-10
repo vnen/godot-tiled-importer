@@ -247,6 +247,26 @@ func parse_tile_data(parser):
 				var prop_data = parse_properties(parser)
 				data["properties"] = prop_data.properties
 				data["propertytypes"] = prop_data.propertytypes
+			
+			elif parser.get_node_name() == "animation":
+				var frame_list = []
+				var err2 = parser.read()
+				while err2 == OK:
+					if parser.get_node_type() == XMLParser.NODE_ELEMENT:
+						if parser.get_node_name() == "frame":
+							var frame = {"tileid": 0, "duration": 0}
+							for i in parser.get_attribute_count():
+								if parser.get_attribute_name(i) == "tileid":
+									frame["tileid"] = parser.get_attribute_value(i)
+								if parser.get_attribute_name(i) == "duration":
+									frame["duration"] = parser.get_attribute_value(i)
+							frame_list.push_back(frame)
+					elif parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
+							if parser.get_node_name() == "animation":
+								break
+					err2 = parser.read()
+				
+				data["animation"] = frame_list
 
 		err = parser.read()
 
