@@ -211,7 +211,12 @@ func make_layer(layer, parent, root, data):
 
 	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
 	var visible = bool(layer.visible) if "visible" in layer else true
-
+	
+	var z_index = 0
+	
+	if "properties" in layer and "z_index" in layer.properties:
+		z_index = layer.properties.z_index
+	
 	if layer.type == "tilelayer":
 		var layer_size = Vector2(int(layer.width), int(layer.height))
 		var tilemap = TileMap.new()
@@ -226,6 +231,7 @@ func make_layer(layer, parent, root, data):
 		tilemap.cell_y_sort = true
 		tilemap.cell_tile_origin = TileMap.TILE_ORIGIN_BOTTOM_LEFT
 		tilemap.collision_layer = options.collision_layer
+		tilemap.z_index = z_index
 
 		var offset = Vector2()
 		if "offsetx" in layer:
@@ -313,6 +319,7 @@ func make_layer(layer, parent, root, data):
 		sprite.texture = image
 		sprite.visible = visible
 		sprite.modulate = Color(1.0, 1.0, 1.0, opacity)
+		sprite.z_index = z_index
 		if options.save_tiled_properties:
 			set_tiled_properties_as_meta(sprite, layer)
 		if options.custom_properties:
@@ -330,6 +337,7 @@ func make_layer(layer, parent, root, data):
 			set_custom_properties(object_layer, layer)
 		object_layer.modulate = Color(1.0, 1.0, 1.0, opacity)
 		object_layer.visible = visible
+		object_layer.z_index = z_index
 		object_layer.set("editor/display_folded", true)
 		parent.add_child(object_layer)
 		object_layer.set_owner(root)
@@ -584,6 +592,7 @@ func make_layer(layer, parent, root, data):
 		group.modulate = Color(1.0, 1.0, 1.0, opacity)
 		group.visible = visible
 		group.position = pos
+		group.z_index = z_index
 
 		if options.save_tiled_properties:
 			set_tiled_properties_as_meta(group, layer)
