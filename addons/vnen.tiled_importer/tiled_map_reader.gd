@@ -61,6 +61,7 @@ const whitelist_properties = [
 	"version",
 	"visible",
 	"width",
+	"custom_material"
 ]
 
 # All templates loaded, can be looked up by path name
@@ -793,7 +794,10 @@ func build_tileset_for_scene(tilesets, source_path, options):
 						result.tile_set_occluder_offset(gid, offset)
 					else:
 						result.tile_add_shape(gid, shape, Transform2D(0, offset), object.type == "one-way")
-
+			
+			if "properties" in ts and "custom_material" in ts.properties:
+				result.tile_set_material(gid, load(ts.properties.custom_material))
+				
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
 				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
