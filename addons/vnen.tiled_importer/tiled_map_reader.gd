@@ -694,7 +694,13 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			imagesize = Vector2(int(ts.imagewidth), int(ts.imageheight))
 
 		var tilesize = Vector2(int(ts.tilewidth), int(ts.tileheight))
-		var tilecount = int(ts.tilecount)
+
+		var tilecount
+		if not "tilecount" in ts:
+			tilecount = make_tilecount(tilesize, imagesize, margin, spacing)
+		else:
+			tilecount = int(ts.tilecount)
+
 
 		var gid = firstgid
 
@@ -703,6 +709,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 		var i = 0
 		var column = 0
+
 
 		# Needed to look up textures for animations
 		var tileRegions = []
@@ -1120,6 +1127,17 @@ func object_sorter(first, second):
 		return first.id < second.id
 	return first.y < second.y
 
+# Create the tilecount for the TileSet if not present.
+# Based on the image and tile dimensions.
+func make_tilecount(tilesize, imagesize, margin, spacing):
+	var horizontal_tile_size = int(tilesize.x + margin * 2 + spacing)
+	var vertical_tile_size = int(tilesize.y + margin * 2 + spacing)
+
+	var horizontal_tile_count = int(imagesize.x) / horizontal_tile_size;
+	var vertical_tile_count = int(imagesize.y) / vertical_tile_size;
+
+	return horizontal_tile_count * vertical_tile_count
+
 # Validates the map dictionary content for missing or invalid keys
 # Returns an error code
 func validate_map(map):
@@ -1161,9 +1179,6 @@ func validate_tileset(tileset):
 		return ERR_INVALID_DATA
 	elif not "tileheight" in tileset or not str(tileset.tileheight).is_valid_integer():
 		print_error("Missing or invalid tileheight tileset property.")
-		return ERR_INVALID_DATA
-	elif not "tilecount" in tileset or not str(tileset.tilecount).is_valid_integer():
-		print_error("Missing or invalid tilecount tileset property.")
 		return ERR_INVALID_DATA
 	if not "image" in tileset:
 		for tile in tileset.tiles:
