@@ -46,7 +46,7 @@ func get_priority():
 	return 1
 
 func get_import_order():
-	return 100
+	return 101
 
 func get_resource_type():
 	return "PackedScene"

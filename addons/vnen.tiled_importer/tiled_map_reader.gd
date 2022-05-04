@@ -881,13 +881,14 @@ func load_image(rel_path, source_path, options):
 
 	var image = null
 	if embed:
+		var img = Image.new()
+		img.load(total_path)
 		image = ImageTexture.new()
-		image.load(total_path)
+		image.create_from_image(img, flags)
 	else:
 		image = ResourceLoader.load(total_path, "ImageTexture")
-
-	if image != null:
-		image.set_flags(flags)
+		if image != null:
+			image.set_flags(flags)
 
 	return image
 
