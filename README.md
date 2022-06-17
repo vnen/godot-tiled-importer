@@ -170,6 +170,13 @@ are embedded, otherwise they will use the flags from their own import settings.
 The collision layer for the maps and objects imported. If you need custom layers for
 each object, consider using a post-import script.
 
+### Collision Mask (Map only)
+
+**Default: `1`**
+
+The collision mask for the maps and objects imported. If you need custom masks for
+each object, consider using a post-import script.
+
 ### Embed Internal Images
 
 **Default: `Off`**
