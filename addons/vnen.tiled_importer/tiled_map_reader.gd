@@ -232,6 +232,7 @@ func make_layer(layer, parent, root, data):
 		tilemap.cell_clip_uv = options.uv_clip
 		tilemap.cell_y_sort = true
 		tilemap.collision_layer = options.collision_layer
+		tilemap.collision_mask = options.collision_mask
 		tilemap.z_index = z_index
 
 		var offset = Vector2()
