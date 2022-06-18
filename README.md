@@ -36,7 +36,7 @@ Then enable the plugin on the Project Settings.
 * Both `.tmx` (XML) and `.json` formats for maps.
 * Both `.tsx` (XML) and `.json` formats for tilesets.
 * Support for Base64 encoded map.
-* Support for layer compression, both `zlib` and `gzip` are supported.
+* Support for layer compression, `zlib`, `gzip`, and `zstd` are supported.
 * Object templates.
 * Orthogonal, isometric, staggered, and hexagonal maps.
 * Import visibility and opacity from layers.
