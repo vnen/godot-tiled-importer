@@ -230,7 +230,7 @@ func make_layer(layer, parent, root, data):
 		tilemap.cell_half_offset = map_offset
 		tilemap.format = 1
 		tilemap.cell_clip_uv = options.uv_clip
-		tilemap.cell_y_sort = true
+		tilemap.cell_y_sort = options.y_sort
 		tilemap.collision_layer = options.collision_layer
 		tilemap.z_index = z_index
 

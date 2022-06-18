@@ -74,6 +74,10 @@ func get_import_options(preset):
 			"default_value": true
 		},
 		{
+			"name": "y_sort",
+			"default_value": true
+		},
+		{
 			"name": "image_flags",
 			"default_value": 0 if preset == PRESET_PIXEL_ART else Texture.FLAGS_DEFAULT,
 			"property_hint": PROPERTY_HINT_FLAGS,
