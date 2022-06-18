@@ -156,6 +156,13 @@ used in the Godot TileMap).
 
 Enable the Clip Uv (Filter Clip on Sprites) to avoid image bleeding on tiles.
 
+### Y Sort (Map only)
+
+**Default: `On`**
+
+The map's tiles will be drawn in order of their Y coordinates. If this is not needed
+it can be turned off to get better performance and more FPS when being drawn.
+
 ### Image Flags
 
 **Default: `Mipmaps, Repeat, Filter`** (Note: this is set as `Texture.FLAGS_DEFAULT`)
