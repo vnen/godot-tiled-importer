@@ -1055,13 +1055,19 @@ func is_convex(vertices):
 	return true
 
 # Decompress the data of the layer
-# Compression argument is a string, either "gzip" or "zlib"
+# Compression argument is a string, either "gzip", "zlib", or "zstd"
 func decompress_layer_data(layer_data, compression, map_size):
-	if compression != "gzip" and compression != "zlib":
-		print_error("Unrecognized compression format: %s" % [compression])
-		return ERR_INVALID_DATA
-
-	var compression_type = File.COMPRESSION_DEFLATE if compression == "zlib" else File.COMPRESSION_GZIP
+	var compression_type = -1
+	match compression:
+		"zlib":
+			compression_type = File.COMPRESSION_DEFLATE
+		"gzip":
+			compression_type = File.COMPRESSION_GZIP
+		"zstd":
+			compression_type = File.COMPRESSION_ZSTD
+		_:
+			print_error("Unrecognized compression format: %s" % [compression])
+			return ERR_INVALID_DATA
 	var expected_size = int(map_size.x) * int(map_size.y) * 4
 	var raw_data = Marshalls.base64_to_raw(layer_data).decompress(expected_size, compression_type)
 
@@ -1236,7 +1242,7 @@ func validate_layer(layer):
 				print_error("Invalid data layer property.")
 				return ERR_INVALID_DATA
 			if "compression" in layer:
-				if layer.compression != "gzip" and layer.compression != "zlib":
+				if layer.compression != "gzip" and layer.compression != "zlib" and layer.compression != "zstd":
 					print_error("Invalid compression type.")
 					return ERR_INVALID_DATA
 		"imagelayer":
