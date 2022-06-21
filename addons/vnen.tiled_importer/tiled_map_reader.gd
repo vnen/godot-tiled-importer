@@ -88,7 +88,7 @@ func build(source_path, options):
 	var err = validate_map(map)
 	if err != OK:
 		return err
-
+		
 	var cell_size = Vector2(int(map.tilewidth), int(map.tileheight))
 	var map_mode = TileMap.MODE_SQUARE
 	var map_offset = TileMap.HALF_OFFSET_DISABLED
@@ -143,7 +143,7 @@ func build(source_path, options):
 		set_tiled_properties_as_meta(root, map)
 	if options.custom_properties:
 		set_custom_properties(root, map)
-
+	
 	var map_data = {
 		"options": options,
 		"map_mode": map_mode,
@@ -156,7 +156,6 @@ func build(source_path, options):
 		"source_path": source_path,
 		"infinite": bool(map.infinite) if "infinite" in map else false
 	}
-
 	for layer in map.layers:
 		err = make_layer(layer, root, root, map_data)
 		if err != OK:
@@ -213,9 +212,8 @@ func make_layer(layer, parent, root, data):
 
 	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
 	var visible = bool(layer.visible) if "visible" in layer else true
-
+	
 	var z_index = 0
-
 	if "properties" in layer and "z_index" in layer.properties:
 		z_index = layer.properties.z_index
 
@@ -331,6 +329,7 @@ func make_layer(layer, parent, root, data):
 		sprite.position = pos + offset
 		sprite.set_owner(root)
 	elif layer.type == "objectgroup":
+		
 		var object_layer = Node2D.new()
 		if options.save_tiled_properties:
 			set_tiled_properties_as_meta(object_layer, layer)
@@ -381,7 +380,7 @@ func make_layer(layer, parent, root, data):
 					set_custom_properties(point, object)
 
 			elif not "gid" in object:
-				# Not a tile object
+				# Not a tile object #collidion only
 				if "type" in object and object.type == "navigation":
 					# Can't make navigation objects right now
 					print_error("Navigation polygons aren't supported in an object layer.")
@@ -496,6 +495,9 @@ func make_layer(layer, parent, root, data):
 
 				var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
 				var collisions = tileset.tile_get_shape_count(tile_id)
+				var collision_name = tileset.tile_get_name(tile_id) #tile name
+				var tile_light_occluder = tileset.tile_get_light_occluder(tile_id) #tile name
+				var tile_light_occluder_offset = tileset.tile_get_occluder_offset(tile_id)
 				var has_collisions = collisions > 0 && object.has("type") && object.type != "sprite"
 				var sprite = Sprite.new()
 				var pos = Vector2()
@@ -503,7 +505,6 @@ func make_layer(layer, parent, root, data):
 				var scale = Vector2(1, 1)
 				sprite.texture = tileset.tile_get_texture(tile_id)
 				var texture_size = sprite.texture.get_size() if sprite.texture != null else Vector2()
-
 				if not is_tile_object:
 					sprite.region_enabled = true
 					sprite.region_rect = tileset.tile_get_region(tile_id)
@@ -539,11 +540,20 @@ func make_layer(layer, parent, root, data):
 					sprite.owner = root
 
 					var shapes = tileset.tile_get_shapes(tile_id)
+#					{
+#					    "autotile_coord": Vector2,
+#					    "one_way": bool,
+#					    "one_way_margin": int,
+#					    "shape": CollisionShape2D,
+#					    "shape_transform": Transform2D,
+#					}
+					
 					for s in shapes:
 						var collision_node = CollisionShape2D.new()
 						collision_node.shape = s.shape
-
 						collision_node.transform = s.shape_transform
+						# Translate from Tiled bottom-left position to Godot top-left
+						collision_node.position.y -= texture_size.y # added to offset the collision shape to match the sprite position	
 						if sprite.flip_h:
 							collision_node.position.x *= -1
 							collision_node.position.x -= cell_size.x
@@ -552,8 +562,27 @@ func make_layer(layer, parent, root, data):
 							collision_node.scale.y *= -1
 							collision_node.position.y *= -1
 							collision_node.position.y -= cell_size.y
+						collision_node.one_way_collision = s.one_way #enable one-way collision for the object collision
 						obj_root.add_child(collision_node)
 						collision_node.owner = root
+
+					if tile_light_occluder != null:
+						var lightoccluder = LightOccluder2D.new()
+						var occliderpos = Vector2()
+						var occliderrot = 0
+#						lightoccluder.visible = bool(object.visible) if "visible" in object else true
+						lightoccluder.position = tile_light_occluder_offset #position the light occluder base on x y position in tiled
+						lightoccluder.position.y -= texture_size.y #offset the lightoccluder to match the texture
+						lightoccluder.rotation_degrees = occliderrot
+						lightoccluder.occluder = tile_light_occluder
+						if options.save_tiled_properties:
+							set_tiled_properties_as_meta(lightoccluder, object)
+						if options.custom_properties:
+							set_custom_properties(lightoccluder, object)
+
+						obj_root.add_child(lightoccluder)
+						lightoccluder.set_owner(root)
+						
 
 				if "name" in object and not str(object.name).empty():
 					obj_root.set_name(str(object.name))
@@ -736,9 +765,10 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			var rel_id = str(gid - firstgid)
 
 			result.create_tile(gid)
-
+			
 			if has_global_image:
 				if rel_id in ts.tiles && "animation" in ts.tiles[rel_id]:
+					
 					var animated_tex = AnimatedTexture.new()
 					animated_tex.frames = ts.tiles[rel_id].animation.size()
 					animated_tex.fps = 0
@@ -785,15 +815,15 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 			if "tiles" in ts and rel_id in ts.tiles and "objectgroup" in ts.tiles[rel_id] \
 					and "objects" in ts.tiles[rel_id].objectgroup:
+				
 				for object in ts.tiles[rel_id].objectgroup.objects:
-
 					var shape = shape_from_object(object)
-
 					if typeof(shape) != TYPE_OBJECT:
 						# Error happened
 						return shape
 
 					var offset = Vector2(float(object.x), float(object.y))
+					var occluderoffset = Vector2(float(object.x), float(object.y))
 					if "width" in object and "height" in object:
 						offset += Vector2(float(object.width) / 2, float(object.height) / 2)
 
@@ -802,7 +832,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 						result.tile_set_navigation_polygon_offset(gid, offset)
 					elif object.type == "occluder":
 						result.tile_set_light_occluder(gid, shape)
-						result.tile_set_occluder_offset(gid, offset)
+						result.tile_set_occluder_offset(gid, occluderoffset)
 					else:
 						result.tile_add_shape(gid, shape, Transform2D(0, offset), object.type == "one-way")
 
@@ -812,15 +842,27 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
 				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
-			if options.save_tiled_properties and rel_id in ts.tiles:
-				for property in whitelist_properties:
-					if property in ts.tiles[rel_id]:
-						if not gid in tile_meta: tile_meta[gid] = {}
-						tile_meta[gid][property] = ts.tiles[rel_id][property]
-
+				
+				# tab once start here to fix save_tiled_properties issue
+				if options.save_tiled_properties and rel_id in ts.tiles:
+					for property in whitelist_properties:
+						if property in ts.tiles[rel_id]:
+							if not gid in tile_meta: tile_meta[gid] = {}
+							tile_meta[gid][property] = ts.tiles[rel_id][property]
 						# If tile has a custom property called 'name', set the tile's name
 						if property == "name":
-							result.tile_set_name(gid, ts.tiles[rel_id].properties.name)
+							if "name" in ts.tiles[rel_id].properties:
+								result.tile_set_name(gid, ts.tiles[rel_id].properties.name)
+								
+						# If tile has a custom property called 'z_index', set the tile's z_index
+						if "z_index" in ts.tiles[rel_id].properties:
+							result.tile_set_z_index(gid, ts.tiles[rel_id].properties.z_index)
+							
+						# If tile has a custom property called 'custom_material', set the tile's material
+						if property == "custom_material":
+							if "custom_material" in ts.tiles[rel_id].properties:
+								result.tile_set_material(gid, load(ts.tiles[rel_id].properties.custom_material))
+				# tab once end here to fix save_tiled_properties issue
 
 
 			gid += 1
