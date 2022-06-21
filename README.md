@@ -52,7 +52,7 @@ Then enable the plugin on the Project Settings.
 * Map background imported as a parallax background (so it's virtually infinite)
 * Support for post-import script.
 * Support for tile animations.
-* Custom materials for tilesets or Custom material per tile (via the ``custom_material`` custom property).
+* Custom materials for tilesets or Custom materials per tile (via the ``custom_material`` custom property).
 * Set Z index per layer or per tile (via the ``z_index`` custom property).
 * Set Name per tile (via the ``name`` custom property).
 
