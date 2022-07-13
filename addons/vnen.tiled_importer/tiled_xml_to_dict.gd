@@ -544,7 +544,9 @@ static func parse_properties(parser):
 						return ERR_INVALID_DATA
 
 					data.properties[prop_data.name] = prop_data.value
-					if prop_data.has("type"):
+					if prop_data.has("class"):
+						data.propertytypes[prop_data.name] = prop_data.class
+					elif prop_data.has("type"):
 						data.propertytypes[prop_data.name] = prop_data.type
 					else:
 						data.propertytypes[prop_data.name] = "string"
