@@ -40,12 +40,12 @@ Then enable the plugin on the Project Settings.
 * Object templates.
 * Orthogonal, isometric, staggered, and hexagonal maps.
 * Import visibility and opacity from layers.
-* Import collision/occluder/navigation shapes (based on Tiled object type).
+* Import collision/occluder/navigation shapes (based on Tiled object class/type).
 * Support for one-way collision shapes.
 * Custom import options, such as whether to enable UV clip.
 * Support for image layers.
 * Support for object layers, which are imported as StaticBody2D, Area2D or LightOccluder2D
-  for shapes (depending on the `type` property) and as Sprite for tiles.
+  for shapes (depending on the `class` or `type` property) and as Sprite for tiles.
 * Support for group layers, which are imported as `Node2D`s.
 * Custom properties for maps, layers, tilesets, and objects are imported as
   metadata. Custom properties on tiles can be imported into the TileSet resource.
@@ -92,9 +92,9 @@ Find more useage information on the [Wiki](https://github.com/vnen/godot-tiled-i
   will be converted to a capsule shape, which may be imprecise. However, if the
   Tiled ellipse is a perfect circle, a CircleShape2D will be used instead.
 
-* Set the type of the object to `area`, `navigation` or `occluder` to use it as such.
+* Set the class/type of the object to `area`, `navigation` or `occluder` to use it as such.
 
-* Set the type of the object to `one-way` to mark it as a one-way shape in Godot
+* Set the class/type of the object to `one-way` to mark it as a one-way shape in Godot
 (both on tile and on object layers).
 
 * Objects in object layer cannot be set as `navigation`.
