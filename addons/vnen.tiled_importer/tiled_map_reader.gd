@@ -385,6 +385,7 @@ func make_layer(layer, parent, root, data):
 				point.visible = bool(object.visible) if "visible" in object else true
 				object_layer.add_child(point)
 				point.set_owner(root)
+				_all_node_objects_by_tiled_id[str(object.id)] = point
 				if "name" in object and not str(object.name).empty():
 					point.set_name(str(object.name))
 				elif "id" in object and not str(object.id).empty():
@@ -503,6 +504,7 @@ func make_layer(layer, parent, root, data):
 					body.visible = bool(object.visible) if "visible" in object else true
 					body.position = pos
 					body.rotation_degrees = rot
+					_all_node_objects_by_tiled_id[str(object.id)] = body
 
 			else: # "gid" in object
 				var tile_raw_id = int(str(object.gid)) & 0xFFFFFFFF
@@ -582,6 +584,7 @@ func make_layer(layer, parent, root, data):
 				sprite.centered = false
 				sprite.region_filter_clip = options.uv_clip
 				sprite.offset = Vector2(0, -texture_size.y)
+				_all_node_objects_by_tiled_id[str(object.id)] = sprite
 
 				if not has_collisions:
 					object_layer.add_child(sprite)
