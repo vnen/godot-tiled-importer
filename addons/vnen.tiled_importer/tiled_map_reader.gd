@@ -70,10 +70,16 @@ const whitelist_properties = [
 var _loaded_templates = {}
 # Maps each tileset file used by the map to it's first gid; Used for template parsing
 var _tileset_path_to_first_gid = {}
+# Contains objects and their object references as node paths
+var _object_references = {}
+# Complete list of object nodes created
+var _all_node_objects_by_tiled_id = {}
 
 func reset_global_memebers():
 	_loaded_templates = {}
 	_tileset_path_to_first_gid = {}
+	_object_references = {}
+	_all_node_objects_by_tiled_id = {}
 
 # Main function
 # Reads a source file and gives back a scene
@@ -190,6 +196,14 @@ func build(source_path, options):
 		colorizer.name = "BackgroundColor"
 		parlayer.add_child(colorizer)
 		colorizer.owner = root
+
+	# Set object references accordingly
+	for object in _object_references:
+		var object_ref_ids = _object_references[object]
+		for object_attribute in object_ref_ids:
+			var tiled_id = object_ref_ids[object_attribute]
+			var node_object = _all_node_objects_by_tiled_id[str(tiled_id)]
+			object.set_meta(object_attribute, root.get_path_to(node_object))
 
 	return root
 
@@ -1091,8 +1105,15 @@ func set_custom_properties(object, tiled_object):
 		return
 
 	var properties = get_custom_properties(tiled_object.properties, tiled_object.propertytypes)
+	var object_reference_ids = {}
 	for property in properties:
 		object.set_meta(property, properties[property])
+		
+		if tiled_object.propertytypes[property] == "object":
+			object_reference_ids[property] = properties[property]
+			
+	if not object_reference_ids.empty():
+		_object_references[object] = object_reference_ids
 
 # Get the custom properties as a dictionary
 # Useful for tile meta, which is not stored directly
