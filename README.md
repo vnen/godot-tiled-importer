@@ -48,7 +48,7 @@ Then enable the plugin on the Project Settings.
   for shapes (depending on the `type` property) and as Sprite for tiles.
 * Support for group layers, which are imported as `Node2D`s.
 * Custom properties for maps, layers, tilesets, and objects are imported as
-  metadata. Custom properties on tiles can be imported into the TileSet resource.
+  metadata. Custom properties on tiles can be imported into the TileSet resource. Referenced objects in Tiled will be represented as NodePath object in Godot.
 * Map background imported as a parallax background (so it's virtually infinite)
 * Support for post-import script.
 * Support for tile animations.
