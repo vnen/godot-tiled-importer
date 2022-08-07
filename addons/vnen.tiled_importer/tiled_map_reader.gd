@@ -496,7 +496,7 @@ func make_layer(layer, parent, root, data):
 
 				var is_tile_object = tileset.tile_get_region(tile_id).get_area() == 0
 				var collisions = tileset.tile_get_shape_count(tile_id)
-				var has_collisions = collisions > 0 && object.has("type") && object.type != "sprite"
+				var has_collisions = collisions > 0
 				var sprite = Sprite.new()
 				var pos = Vector2()
 				var rot = 0
@@ -526,11 +526,15 @@ func make_layer(layer, parent, root, data):
 
 				var obj_root = sprite
 				if has_collisions:
-					match object.type:
-						"area": obj_root = Area2D.new()
-						"kinematic": obj_root = KinematicBody2D.new()
-						"rigid": obj_root = RigidBody2D.new()
-						_: obj_root = StaticBody2D.new()
+					if object.has("type"):
+						match object.type:
+							"area": obj_root = Area2D.new()
+							"kinematic": obj_root = KinematicBody2D.new()
+							"rigid": obj_root = RigidBody2D.new()
+							"one-way": obj_root = StaticBody2D.new()
+							_: obj_root = StaticBody2D.new()
+					else:
+						obj_root = StaticBody2D.new()
 
 					object_layer.add_child(obj_root)
 					obj_root.owner = root
@@ -546,12 +550,15 @@ func make_layer(layer, parent, root, data):
 						collision_node.transform = s.shape_transform
 						if sprite.flip_h:
 							collision_node.position.x *= -1
-							collision_node.position.x -= cell_size.x
+							collision_node.position.x += cell_size.x
 							collision_node.scale.x *= -1
 						if sprite.flip_v:
 							collision_node.scale.y *= -1
 							collision_node.position.y *= -1
+						else:
 							collision_node.position.y -= cell_size.y
+						if object.has("type") && object.type == "one-way":
+							collision_node.one_way_collision = true
 						obj_root.add_child(collision_node)
 						collision_node.owner = root
 
