@@ -738,7 +738,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			result.create_tile(gid)
 
 			if has_global_image:
-				if rel_id in ts.tiles && "animation" in ts.tiles[rel_id]:
+				if "tiles" in ts && rel_id in ts.tiles && "animation" in ts.tiles[rel_id]:
 					var animated_tex = AnimatedTexture.new()
 					animated_tex.frames = ts.tiles[rel_id].animation.size()
 					animated_tex.fps = 0
