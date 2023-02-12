@@ -211,12 +211,12 @@ func make_layer(layer, parent, root, data):
 
 	var opacity = float(layer.opacity) if "opacity" in layer else 1.0
 	var visible = bool(layer.visible) if "visible" in layer else true
-	
+
 	var z_index = 0
-	
+
 	if "properties" in layer and "z_index" in layer.properties:
 		z_index = layer.properties.z_index
-	
+
 	if layer.type == "tilelayer":
 		var layer_size = Vector2(int(layer.width), int(layer.height))
 		var tilemap = TileMap.new()
@@ -702,26 +702,26 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 		var i = 0
 		var column = 0
-		
+
 		# Needed to look up textures for animations
 		var tileRegions = []
 		while i < tilecount:
 			var tilepos = Vector2(x, y)
 			var region = Rect2(tilepos, tilesize)
-			
+
 			tileRegions.push_back(region)
-			
+
 			column += 1
 			i += 1
-			
+
 			x += int(tilesize.x) + spacing
 			if (columns > 0 and column >= columns) or x >= int(imagesize.x) - margin or (x + int(tilesize.x)) > int(imagesize.x):
 				x = margin
 				y += int(tilesize.y) + spacing
 				column = 0
-		
+
 		i = 0
-		
+
 		while i < tilecount:
 			var region = tileRegions[i]
 
@@ -784,13 +784,10 @@ func build_tileset_for_scene(tilesets, source_path, options):
 				var found_id = 0
 				for tile_i in range(0, ts.tiles.size()):
 					var tile = ts.tiles[tile_i]
-					print("muraturi")
-					print(tile)
 					if str(tile.id) == rel_id:
 						found_id = tile_i
 						has_tile = true
 
-				print("spoj: " +ts.name+" " + str(has_tile))
 				if has_tile and "objectgroup" in ts.tiles[found_id] and "objects" in ts.tiles[found_id].objectgroup:
 					for object in ts.tiles[found_id].objectgroup.objects:
 
@@ -801,8 +798,6 @@ func build_tileset_for_scene(tilesets, source_path, options):
 							return shape
 
 						var offset = Vector2(float(object.x), float(object.y))
-						if options.apply_offset:
-							offset += result.tile_get_texture_offset(gid)
 						if "width" in object and "height" in object:
 							offset += Vector2(float(object.width) / 2, float(object.height) / 2)
 
@@ -814,10 +809,10 @@ func build_tileset_for_scene(tilesets, source_path, options):
 							result.tile_set_occluder_offset(gid, offset)
 						else:
 							result.tile_add_shape(gid, shape, Transform2D(0, offset), object.type == "one-way")
-			
+
 			if "properties" in ts and "custom_material" in ts.properties:
 				result.tile_set_material(gid, load(ts.properties.custom_material))
-				
+
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
 				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
@@ -826,12 +821,12 @@ func build_tileset_for_scene(tilesets, source_path, options):
 					if property in ts.tiles[rel_id]:
 						if not gid in tile_meta: tile_meta[gid] = {}
 						tile_meta[gid][property] = ts.tiles[rel_id][property]
-					
+
 					# If tile has a custom property called 'name', set the tile's name
 					if property == "name":
 						result.tile_set_name(gid, ts.tiles[rel_id].properties.name)
 
-			
+
 			gid += 1
 			i += 1
 
