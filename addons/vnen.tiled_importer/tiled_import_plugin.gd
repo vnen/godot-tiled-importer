@@ -35,7 +35,7 @@ func get_visible_name():
 
 func get_recognized_extensions():
 	if ProjectSettings.get_setting("tiled_importer/enable_json_format"):
-		return ["json", "tmx"]
+		return ["json", "tmj", "tmx"]
 	else:
 		return ["tmx"]
 
