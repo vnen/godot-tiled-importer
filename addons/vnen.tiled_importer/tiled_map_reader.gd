@@ -815,7 +815,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 
 			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
 					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
-				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id], ts.tilepropertytypes[rel_id])
+				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id])
 			if options.save_tiled_properties and rel_id in ts.tiles:
 				for property in whitelist_properties:
 					if property in ts.tiles[rel_id]:
@@ -1090,31 +1090,32 @@ func decode_layer(layer_data):
 
 # Set the custom properties into the metadata of the object
 func set_custom_properties(object, tiled_object):
-	if not "properties" in tiled_object or not "propertytypes" in tiled_object:
+	if not "properties" in tiled_object:
 		return
 
-	var properties = get_custom_properties(tiled_object.properties, tiled_object.propertytypes)
+	var properties = get_custom_properties(tiled_object.properties)
 	for property in properties:
 		object.set_meta(property, properties[property])
 
 # Get the custom properties as a dictionary
 # Useful for tile meta, which is not stored directly
-func get_custom_properties(properties, types):
+func get_custom_properties(properties):
 	var result = {}
 
 	for property in properties:
+		var propertyType = property.type
 		var value = null
-		if str(types[property]).to_lower() == "bool":
-			value = bool(properties[property])
-		elif str(types[property]).to_lower() == "int":
-			value = int(properties[property])
-		elif str(types[property]).to_lower() == "float":
-			value = float(properties[property])
-		elif str(types[property]).to_lower() == "color":
-			value = Color(properties[property])
+		if propertyType == "bool":
+			value = bool(property.value)
+		elif propertyType == "int":
+			value = int(property.value)
+		elif propertyType == "float":
+			value = float(property.value)
+		elif propertyType == "color":
+			value = Color(property.value)
 		else:
-			value = str(properties[property])
-		result[property] = value
+			value = str(property.value)
+		result[property.name] = value
 	return result
 
 # Get the available whitelisted properties from the Tiled object
