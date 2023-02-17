@@ -30,8 +30,8 @@ func get_name():
 	return "Tiled Map Importer"
 
 func _enter_tree():
-	tilemap_import_plugin = preload("tiled_tilemap_import_plugin.gd").new()
-	tileset_import_plugin = preload("tiled_tileset_import_plugin.gd").new()
+	tilemap_import_plugin = preload("tilemap_import_plugin.gd").new()
+	tileset_import_plugin = preload("tileset_import_plugin.gd").new()
 	add_import_plugin(tilemap_import_plugin)
 	add_import_plugin(tileset_import_plugin)
 

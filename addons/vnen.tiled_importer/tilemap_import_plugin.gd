@@ -25,7 +25,7 @@ extends EditorImportPlugin
 
 enum { PRESET_DEFAULT, PRESET_PIXEL_ART }
 
-const TileMapReader = preload("tilemap_reader.gd")
+const TileMapBuilder = preload("tilemap_builder.gd")
 
 func get_importer_name():
 	return "vnen.tilemap_importer"
@@ -105,9 +105,11 @@ func get_option_visibility(option, options):
 	return true
 
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
-	var map_reader = TileMapReader.new()
+	var builder = TileMapBuilder.new()
 
-	var scene = map_reader.build(source_file, options)
+	# Offset is only optional for importing TileSets
+	options.apply_offset = true
+	var scene = builder.build(source_file, options)
 
 	if typeof(scene) != TYPE_OBJECT:
 		# Error happened
