@@ -34,10 +34,7 @@ func get_visible_name():
 	return "Scene from Tiled"
 
 func get_recognized_extensions():
-	if ProjectSettings.get_setting("tiled_importer/enable_json_format"):
-		return ["json", "tmj", "tmx"]
-	else:
-		return ["tmx"]
+	return ["json", "tmj", "tmx"]
 
 func get_save_extension():
 	return "scn"
