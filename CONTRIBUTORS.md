@@ -20,3 +20,4 @@ In chronological order based on the first contribution.
 - [Ross Hadden (rosshadden)](https://github.com/rosshadden)
 - [Tim van Oosterhout (Tubeliar)](https://github.com/Tubeliar)
 - [SirRamEsq](https://github.com/SirRamEsq)
+- [Cosmin Munteanu(c64cosmin)](https://github.com/c64cosmin)
