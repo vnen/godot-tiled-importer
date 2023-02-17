@@ -30,7 +30,7 @@ const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
 # XML Format reader
-const TiledXMLToDictionary = preload("tiled_xml_to_dict.gd")
+const XMLToDictionary = preload("xml_to_dict.gd")
 
 # Polygon vertices sorter
 const PolygonSorter = preload("polygon_sorter.gd")
@@ -647,7 +647,7 @@ func build_tileset_for_scene(tilesets, source_path, options):
 			_tileset_path_to_first_gid[ts_source_path] = tileset.firstgid
 
 			if ts.source.get_extension().to_lower() == "tsx":
-				var tsx_reader = TiledXMLToDictionary.new()
+				var tsx_reader = XMLToDictionary.new()
 				ts = tsx_reader.read_tsx(ts_source_path)
 				if typeof(ts) != TYPE_DICTIONARY:
 					# Error happened
@@ -899,7 +899,7 @@ func load_image(rel_path, source_path, options):
 # Returns an error code if fails
 func read_file(path):
 	if path.get_extension().to_lower() == "tmx":
-		var tmx_to_dict = TiledXMLToDictionary.new()
+		var tmx_to_dict = XMLToDictionary.new()
 		var data = tmx_to_dict.read_tmx(path)
 		if typeof(data) != TYPE_DICTIONARY:
 			# Error happened
@@ -924,7 +924,7 @@ func read_file(path):
 # Returns an error code if fails
 func read_tileset_file(path):
 	if path.get_extension().to_lower() == "tsx":
-		var tmx_to_dict = TiledXMLToDictionary.new()
+		var tmx_to_dict = XMLToDictionary.new()
 		var data = tmx_to_dict.read_tsx(path)
 		if typeof(data) != TYPE_DICTIONARY:
 			# Error happened
@@ -1341,7 +1341,7 @@ func parse_template(parser, path):
 				data.tileset = ts_path
 
 			if parser.get_node_name() == "object":
-				var object = TiledXMLToDictionary.parse_object(parser)
+				var object = XMLToDictionary.parse_object(parser)
 				for k in object:
 					data[k] = object[k]
 
