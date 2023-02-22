@@ -29,13 +29,17 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
-const DataValidator = preload("data_validator.gd")
 const Utils = preload("utils.gd")
+const DataValidator = preload("data_validator.gd")
 # XML Format reader
-const XMLToDictionary = preload("xml_to_dict.gd")
+var XMLToDictionary
 
 # Polygon vertices sorter
-const PolygonSorter = preload("polygon_sorter.gd")
+var PolygonSorter
+
+func _init_classes():
+	XMLToDictionary = preload("xml_to_dict.gd").new()
+	PolygonSorter = preload("polygon_sorter.gd").new()
 
 # Prefix for error messages, make easier to identify the source
 const error_prefix = "Tiled Importer: "
@@ -70,14 +74,8 @@ const whitelist_properties = [
 	"custom_material"
 ]
 
-# All templates loaded, can be looked up by path name
-var _loaded_templates = {}
 # Maps each tileset file used by the map to it's first gid; Used for template parsing
 var _tileset_path_to_first_gid = {}
-
-func reset_global_memebers():
-	_loaded_templates = {}
-	_tileset_path_to_first_gid = {}
 
 func set_default_obj_params(object):
 	# Set default values for object
@@ -94,6 +92,8 @@ var flags
 # Makes a standalone TileSet. Useful for importing TileSets from Tiled
 # Returns an error code if fails
 func build(source_path, options):
+	_init_classes()
+
 	var tileset = load_tileset_file(source_path)
 
 	return build_tileset_for_scene([tileset], source_path, options)
@@ -140,6 +140,8 @@ func _resolve_tileset_source(tileset, source_path):
 # Makes a tileset from a array of tilesets data
 # Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
 func build_tileset_for_scene(tilesets, source_path, options):
+	_init_classes()
+
 	var result = TileSet.new()
 	var err = ERR_INVALID_DATA
 	var tile_meta = {}
@@ -414,8 +416,7 @@ func shape_from_object(object):
 			shape.closed = "polygon" in object
 		else:
 			if is_convex(vertices):
-				var sorter = PolygonSorter.new()
-				vertices = sorter.sort_polygon(vertices)
+				vertices = PolygonSorter.sort_polygon(vertices)
 				shape = ConvexPolygonShape2D.new()
 				shape.points = vertices
 			else:
@@ -574,6 +575,13 @@ func object_sorter(first, second):
 		return first.id < second.id
 	return first.y < second.y
 
+#########################
+# Template builder code
+#########################
+
+# All templates loaded, can be looked up by path name
+var _loaded_templates = {}
+
 func get_template(path):
 	# If this template has not yet been loaded
 	if not _loaded_templates.has(path):
@@ -655,13 +663,6 @@ func parse_template(parser, path):
 
 	return data
 
-func get_first_gid_from_tileset_path(path):
-	for t in _tileset_path_to_first_gid:
-		if Utils.is_same_file(path, t):
-			return _tileset_path_to_first_gid[t]
-
-	return 0
-
 func apply_template(object, template_immutable):
 	for k in template_immutable:
 		# Do not overwrite any object data
@@ -672,3 +673,12 @@ func apply_template(object, template_immutable):
 
 		elif not object.has(k):
 			object[k] = template_immutable[k]
+
+func get_first_gid_from_tileset_path(path):
+	for t in _tileset_path_to_first_gid:
+		if Utils.is_same_file(path, t):
+			return _tileset_path_to_first_gid[t]
+
+	return 0
+
+

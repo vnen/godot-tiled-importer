@@ -29,13 +29,19 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
-const DataValidator = preload("data_validator.gd")
 const Utils = preload("utils.gd")
+const DataValidator = preload("data_validator.gd")
+var TilesetBuilder = null
 # XML Format reader
-const XMLToDictionary = preload("xml_to_dict.gd")
+var XMLToDictionary = null
 
 # Polygon vertices sorter
-const PolygonSorter = preload("polygon_sorter.gd")
+var PolygonSorter = null
+
+func _init_classes():
+	TilesetBuilder = preload("tileset_builder.gd").new()
+	XMLToDictionary = preload("xml_to_dict.gd").new()
+	PolygonSorter = preload("polygon_sorter.gd").new()
 
 # Prefix for error messages, make easier to identify the source
 const error_prefix = "Tiled Importer: "
@@ -70,19 +76,11 @@ const whitelist_properties = [
 	"custom_material"
 ]
 
-# All templates loaded, can be looked up by path name
-var _loaded_templates = {}
-# Maps each tileset file used by the map to it's first gid; Used for template parsing
-var _tileset_path_to_first_gid = {}
-
-func reset_global_memebers():
-	_loaded_templates = {}
-	_tileset_path_to_first_gid = {}
-
 # Main function
 # Reads a source file and gives back a scene
 func build(source_path, options):
-	reset_global_memebers()
+	_init_classes()
+
 	var map = read_file(source_path)
 	if typeof(map) == TYPE_INT:
 		return map
@@ -136,7 +134,7 @@ func build(source_path, options):
 							cell_offset.y += 1
 							map_pos_offset.y -= cell_size.y
 
-	var tileset = build_tileset_for_scene(map.tilesets, source_path, options)
+	var tileset = TilesetBuilder.build_tileset_for_scene(map.tilesets, source_path, options)
 	if typeof(tileset) != TYPE_OBJECT:
 		# Error happened
 		return tileset
@@ -302,7 +300,7 @@ func make_layer(layer, parent, root, data):
 	elif layer.type == "imagelayer":
 		var image = null
 		if layer.image != "":
-			image = load_image(layer.image, source_path, options)
+			image = Utils.load_image(layer.image, source_path, options)
 			if typeof(image) != TYPE_OBJECT:
 				# Error happened
 				return image
@@ -357,14 +355,14 @@ func make_layer(layer, parent, root, data):
 			if "template" in object:
 				var template_file = object["template"]
 				var template_filename = Utils.remove_filename_from_path(data["source_path"]) + template_file
-				var template_data_immutable = get_template(template_filename)
+				var template_data_immutable = TilesetBuilder.get_template(template_filename)
 				if typeof(template_data_immutable) != TYPE_DICTIONARY:
 					# Error happened
 					print("Error getting template for object with id " + str(data["id"]))
 					continue
 
 				# Overwrite template data with current object data
-				apply_template(object, template_data_immutable)
+				TilesetBuilder.apply_template(object, template_data_immutable)
 
 				set_default_obj_params(object)
 
@@ -638,8 +636,7 @@ var flags
 # Returns an error code if fails
 func read_file(path):
 	if path.get_extension().to_lower() == "tmx":
-		var tmx_to_dict = XMLToDictionary.new()
-		var data = tmx_to_dict.read_tmx(path)
+		var data = XMLToDictionary.read_tmx(path)
 		if typeof(data) != TYPE_DICTIONARY:
 			# Error happened
 			print_error("Error parsing map file '%s'." % [path])
@@ -845,95 +842,3 @@ func object_sorter(first, second):
 	if first.y == second.y:
 		return first.id < second.id
 	return first.y < second.y
-
-func get_template(path):
-	# If this template has not yet been loaded
-	if not _loaded_templates.has(path):
-		# IS XML
-		if path.get_extension().to_lower() == "tx":
-			var parser = XMLParser.new()
-			var err = parser.open(path)
-			if err != OK:
-				print_error("Error opening TX file '%s'." % [path])
-				return err
-			var content = parse_template(parser, path)
-			if typeof(content) != TYPE_DICTIONARY:
-				# Error happened
-				print_error("Error parsing template map file '%s'." % [path])
-				return false
-			_loaded_templates[path] = content
-
-		# IS JSON
-		else:
-			var file = File.new()
-			var err = file.open(path, File.READ)
-			if err != OK:
-				return err
-
-			var json_res = JSON.parse(file.get_as_text())
-			if json_res.error != OK:
-				print_error("Error parsing JSON template map file '%s'." % [path])
-				return json_res.error
-
-			var result = json_res.result
-			if typeof(result) != TYPE_DICTIONARY:
-				print_error("Error parsing JSON template map file '%s'." % [path])
-				return ERR_INVALID_DATA
-
-			var object = result.object
-			if object.has("gid"):
-				if result.has("tileset"):
-					var ts_path = Utils.remove_filename_from_path(path) + result.tileset.source
-					var tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
-					object.gid += tileset_gid_increment
-
-			_loaded_templates[path] = object
-
-	var dict = _loaded_templates[path]
-	var dictCopy = {}
-	for k in dict:
-		dictCopy[k] = dict[k]
-
-	return dictCopy
-
-func parse_template(parser, path):
-	var err = OK
-	# Template root node shouldn't have attributes
-	var data = {}
-	var tileset_gid_increment = 0
-	data.id = 0
-
-	err = parser.read()
-	while err == OK:
-		if parser.get_node_type() == XMLParser.NODE_ELEMENT_END:
-			if parser.get_node_name() == "template":
-				break
-
-		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
-			if parser.get_node_name() == "tileset":
-				var ts_path = Utils.remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
-				tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
-				data.tileset = ts_path
-
-			if parser.get_node_name() == "object":
-				var object = XMLToDictionary.parse_object(parser)
-				for k in object:
-					data[k] = object[k]
-
-		err = parser.read()
-
-	if data.has("gid"):
-		data["gid"] += tileset_gid_increment
-
-	return data
-
-func apply_template(object, template_immutable):
-	for k in template_immutable:
-		# Do not overwrite any object data
-		if typeof(template_immutable[k]) == TYPE_DICTIONARY:
-			if not object.has(k):
-				object[k] = {}
-			apply_template(object[k], template_immutable[k])
-
-		elif not object.has(k):
-			object[k] = template_immutable[k]
