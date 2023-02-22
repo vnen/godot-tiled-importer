@@ -10,7 +10,7 @@ config_version=4
 
 [application]
 
-config/name="test"
+config/name="Tiled-test"
 config/icon="res://icon.png"
 
 [editor_plugins]
