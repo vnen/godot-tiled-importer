@@ -41,7 +41,7 @@ const PolygonSorter = preload("polygon_sorter.gd")
 const error_prefix = "Tiled Importer: "
 
 # Custom function to print error, to centralize the prefix addition
-static func print_error(err):
+func print_error(err):
 	printerr(error_prefix + err)
 
 # Properties to save the value in the metadata
@@ -927,7 +927,7 @@ func parse_template(parser, path):
 
 	return data
 
-static func apply_template(object, template_immutable):
+func apply_template(object, template_immutable):
 	for k in template_immutable:
 		# Do not overwrite any object data
 		if typeof(template_immutable[k]) == TYPE_DICTIONARY:

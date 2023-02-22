@@ -274,7 +274,7 @@ func parse_tile_data(parser):
 
 # Parses the data of a single object from the XML and return a dictionary
 # Returns an error code if fails
-static func parse_object(parser):
+func parse_object(parser):
 	var err = OK
 	var data = attributes_to_dict(parser)
 
@@ -522,7 +522,7 @@ func parse_group_layer(parser, infinite):
 
 # Parses properties data from the XML and return a dictionary
 # Returns an error code if fails
-static func parse_properties(parser):
+func parse_properties(parser):
 	var err = OK
 	var data = {
 		"properties": {},
@@ -554,7 +554,7 @@ static func parse_properties(parser):
 	return data
 
 # Reads the attributes of the current element and return them as a dictionary
-static func attributes_to_dict(parser):
+func attributes_to_dict(parser):
 	var data = {}
 	for i in range(parser.get_attribute_count()):
 		var attr = parser.get_attribute_name(i)
