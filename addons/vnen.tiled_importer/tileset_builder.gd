@@ -574,10 +574,6 @@ func object_sorter(first, second):
 		return first.id < second.id
 	return first.y < second.y
 
-# Custom function to print error, to centralize the prefix addition
-func print_error(err):
-	printerr(error_prefix + err)
-
 func get_template(path):
 	# If this template has not yet been loaded
 	if not _loaded_templates.has(path):

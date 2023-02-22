@@ -634,17 +634,6 @@ func set_default_obj_params(object):
 
 var flags
 
-	var set = read_tileset_file(source_path)
-	if typeof(set) == TYPE_INT:
-		return set
-	if typeof(set) != TYPE_DICTIONARY:
-		return ERR_INVALID_DATA
-
-	# Just to validate and build correctly using the existing builder
-	set["firstgid"] = 0
-
-	return build_tileset_for_scene([set], source_path, options)
-
 # Reads a file and returns its contents as a dictionary
 # Returns an error code if fails
 func read_file(path):
@@ -658,27 +647,6 @@ func read_file(path):
 		return data
 
 	# Not TMX, must be JSON
-	var file = File.new()
-	var err = file.open(path, File.READ)
-	if err != OK:
-		return err
-
-	var content = JSON.parse(file.get_as_text())
-	if content.error != OK:
-		print_error("Error parsing JSON: " + content.error_string)
-		return content.error
-
-	return content.result
-	if path.get_extension().to_lower() == "tsx":
-		var tmx_to_dict = XMLToDictionary.new()
-		var data = tmx_to_dict.read_tsx(path)
-		if typeof(data) != TYPE_DICTIONARY:
-			# Error happened
-			print_error("Error parsing map file '%s'." % [path])
-		# Return error or result
-		return data
-
-	# Not TSX, must be JSON
 	var file = File.new()
 	var err = file.open(path, File.READ)
 	if err != OK:
