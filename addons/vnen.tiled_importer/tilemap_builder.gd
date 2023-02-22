@@ -29,6 +29,8 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
+const DataValidator = preload("data_validator.gd")
+const Utils = preload("utils.gd")
 # XML Format reader
 const XMLToDictionary = preload("xml_to_dict.gd")
 
@@ -37,6 +39,10 @@ const PolygonSorter = preload("polygon_sorter.gd")
 
 # Prefix for error messages, make easier to identify the source
 const error_prefix = "Tiled Importer: "
+
+# Custom function to print error, to centralize the prefix addition
+static func print_error(err):
+	printerr(error_prefix + err)
 
 # Properties to save the value in the metadata
 const whitelist_properties = [
@@ -83,7 +89,7 @@ func build(source_path, options):
 	if typeof(map) != TYPE_DICTIONARY:
 		return ERR_INVALID_DATA
 
-	var err = validate_map(map)
+	var err = DataValidator.validate_map(map)
 	if err != OK:
 		return err
 
@@ -194,7 +200,7 @@ func build(source_path, options):
 # Creates a layer node from the data
 # Returns an error code
 func make_layer(layer, parent, root, data):
-	var err = validate_layer(layer)
+	var err = DataValidator.validate_layer(layer)
 	if err != OK:
 		return err
 
@@ -250,7 +256,7 @@ func make_layer(layer, parent, root, data):
 			chunks = [layer]
 
 		for chunk in chunks:
-			err = validate_chunk(chunk)
+			err = DataValidator.validate_chunk(chunk)
 			if err != OK:
 				return err
 
@@ -350,7 +356,8 @@ func make_layer(layer, parent, root, data):
 		for object in layer.objects:
 			if "template" in object:
 				var template_file = object["template"]
-				var template_data_immutable = get_template(remove_filename_from_path(data["source_path"]) + template_file)
+				var template_filename = Utils.remove_filename_from_path(data["source_path"]) + template_file
+				var template_data_immutable = get_template(template_filename)
 				if typeof(template_data_immutable) != TYPE_DICTIONARY:
 					# Error happened
 					print("Error getting template for object with id " + str(data["id"]))
@@ -627,226 +634,6 @@ func set_default_obj_params(object):
 
 var flags
 
-# Makes a tileset from a array of tilesets data
-# Since Godot supports only one TileSet per TileMap, all tilesets from Tiled are combined
-func build_tileset_for_scene(tilesets, source_path, options):
-	var result = TileSet.new()
-	var err = ERR_INVALID_DATA
-	var tile_meta = {}
-
-	for tileset in tilesets:
-		var ts = tileset
-		var ts_source_path = source_path
-		if "source" in ts:
-			if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
-				print_error("Missing or invalid firstgid tileset property.")
-				return ERR_INVALID_DATA
-
-			ts_source_path = source_path.get_base_dir().plus_file(ts.source)
-			# Used later for templates
-			_tileset_path_to_first_gid[ts_source_path] = tileset.firstgid
-
-			if ts.source.get_extension().to_lower() == "tsx":
-				var tsx_reader = XMLToDictionary.new()
-				ts = tsx_reader.read_tsx(ts_source_path)
-				if typeof(ts) != TYPE_DICTIONARY:
-					# Error happened
-					return ts
-			else: # JSON Tileset
-				var f = File.new()
-				err = f.open(ts_source_path, File.READ)
-				if err != OK:
-					print_error("Error opening tileset '%s'." % [ts.source])
-					return err
-
-				var json_res = JSON.parse(f.get_as_text())
-				if json_res.error != OK:
-					print_error("Error parsing tileset '%s' JSON: %s" % [ts.source, json_res.error_string])
-					return ERR_INVALID_DATA
-
-				ts = json_res.result
-				if typeof(ts) != TYPE_DICTIONARY:
-					print_error("Tileset '%s' is not a dictionary." % [ts.source])
-					return ERR_INVALID_DATA
-
-			ts.firstgid = tileset.firstgid
-
-		err = validate_tileset(ts)
-		if err != OK:
-			return err
-
-		var has_global_image = "image" in ts
-
-		var spacing = int(ts.spacing) if "spacing" in ts and str(ts.spacing).is_valid_integer() else 0
-		var margin = int(ts.margin) if "margin" in ts and str(ts.margin).is_valid_integer() else 0
-		var firstgid = int(ts.firstgid)
-		var columns = int(ts.columns) if "columns" in ts and str(ts.columns).is_valid_integer() else -1
-
-		var image = null
-		var imagesize = Vector2()
-
-		if has_global_image:
-			image = load_image(ts.image, ts_source_path, options)
-			if typeof(image) != TYPE_OBJECT:
-				# Error happened
-				return image
-			imagesize = Vector2(int(ts.imagewidth), int(ts.imageheight))
-
-		var tilesize = Vector2(int(ts.tilewidth), int(ts.tileheight))
-		var tilecount = int(ts.tilecount)
-
-		var gid = firstgid
-
-		var x = margin
-		var y = margin
-
-		var i = 0
-		var column = 0
-
-		# Needed to look up textures for animations
-		var tileRegions = []
-		while i < tilecount:
-			var tilepos = Vector2(x, y)
-			var region = Rect2(tilepos, tilesize)
-
-			tileRegions.push_back(region)
-
-			column += 1
-			i += 1
-
-			x += int(tilesize.x) + spacing
-			if (columns > 0 and column >= columns) or x >= int(imagesize.x) - margin or (x + int(tilesize.x)) > int(imagesize.x):
-				x = margin
-				y += int(tilesize.y) + spacing
-				column = 0
-
-		i = 0
-
-		while i < tilecount:
-			var region = tileRegions[i]
-
-			var rel_id = str(gid - firstgid)
-
-			result.create_tile(gid)
-
-			if has_global_image:
-				if "tiles" in ts && rel_id in ts.tiles && "animation" in ts.tiles[rel_id]:
-					var animated_tex = AnimatedTexture.new()
-					animated_tex.frames = ts.tiles[rel_id].animation.size()
-					animated_tex.fps = 0
-					var c = 0
-					# Animated texture wants us to have seperate textures for each frame
-					# so we have to pull them out of the tileset
-					var tilesetTexture = image.get_data()
-					for g in ts.tiles[rel_id].animation:
-						var frameTex = tilesetTexture.get_rect(tileRegions[(int(g.tileid))])
-						var newTex = ImageTexture.new()
-						newTex.create_from_image(frameTex, flags)
-						animated_tex.set_frame_texture(c, newTex)
-						animated_tex.set_frame_delay(c, float(g.duration) * 0.001)
-						c += 1
-					result.tile_set_texture(gid, animated_tex)
-					result.tile_set_region(gid, Rect2(Vector2(0, 0), tilesize))
-				else:
-					result.tile_set_texture(gid, image)
-					result.tile_set_region(gid, region)
-				if options.apply_offset:
-					result.tile_set_texture_offset(gid, Vector2(0, -tilesize.y))
-			elif not rel_id in ts.tiles:
-				gid += 1
-				continue
-			else:
-				if rel_id in ts.tiles && "animation" in ts.tiles[rel_id]:
-					var animated_tex = AnimatedTexture.new()
-					animated_tex.frames = ts.tiles[rel_id].animation.size()
-					animated_tex.fps = 0
-					var c = 0
-					#untested
-					var image_path = ts.tiles[rel_id].image
-					for g in ts.tiles[rel_id].animation:
-						animated_tex.set_frame_texture(c, load_image(image_path, ts_source_path, options))
-						animated_tex.set_frame_delay(c, float(g.duration) * 0.001)
-						c += 1
-					result.tile_set_texture(gid, animated_tex)
-					result.tile_set_region(gid, Rect2(Vector2(0, 0), tilesize))
-				else:
-					var image_path = ts.tiles[rel_id].image
-					image = load_image(image_path, ts_source_path, options)
-					if typeof(image) != TYPE_OBJECT:
-						# Error happened
-						return image
-					result.tile_set_texture(gid, image)
-				if options.apply_offset:
-					result.tile_set_texture_offset(gid, Vector2(0, -image.get_height()))
-
-			if "tiles" in ts:
-				var has_tile = false
-				var found_id = 0
-				for tile_i in range(0, ts.tiles.size()):
-					var tile = ts.tiles[tile_i]
-					if str(tile.id) == rel_id:
-						found_id = tile_i
-						has_tile = true
-
-				if has_tile and "objectgroup" in ts.tiles[found_id] and "objects" in ts.tiles[found_id].objectgroup:
-					for object in ts.tiles[found_id].objectgroup.objects:
-
-						var shape = shape_from_object(object)
-
-						if typeof(shape) != TYPE_OBJECT:
-							# Error happened
-							return shape
-
-						var offset = Vector2(float(object.x), float(object.y))
-						if "width" in object and "height" in object:
-							offset += Vector2(float(object.width) / 2, float(object.height) / 2)
-
-						if object.type == "navigation":
-							result.tile_set_navigation_polygon(gid, shape)
-							result.tile_set_navigation_polygon_offset(gid, offset)
-						elif object.type == "occluder":
-							result.tile_set_light_occluder(gid, shape)
-							result.tile_set_occluder_offset(gid, offset)
-						else:
-							result.tile_add_shape(gid, shape, Transform2D(0, offset), object.type == "one-way")
-
-			if "properties" in ts and "custom_material" in ts.properties:
-				result.tile_set_material(gid, load(ts.properties.custom_material))
-
-			if options.custom_properties and options.tile_metadata and "tileproperties" in ts \
-					and "tilepropertytypes" in ts and rel_id in ts.tileproperties and rel_id in ts.tilepropertytypes:
-				tile_meta[gid] = get_custom_properties(ts.tileproperties[rel_id])
-			if options.save_tiled_properties and rel_id in ts.tiles:
-				for property in whitelist_properties:
-					if property in ts.tiles[rel_id]:
-						if not gid in tile_meta: tile_meta[gid] = {}
-						tile_meta[gid][property] = ts.tiles[rel_id][property]
-
-					# If tile has a custom property called 'name', set the tile's name
-					if property == "name":
-						result.tile_set_name(gid, ts.tiles[rel_id].properties.name)
-
-
-			gid += 1
-			i += 1
-
-		if str(ts.name) != "":
-			result.resource_name = str(ts.name)
-
-		if options.save_tiled_properties:
-			set_tiled_properties_as_meta(result, ts)
-		if options.custom_properties:
-			if "properties" in ts and "propertytypes" in ts:
-				set_custom_properties(result, ts)
-
-	if options.custom_properties and options.tile_metadata:
-		result.set_meta("tile_meta", tile_meta)
-
-	return result
-
-# Makes a standalone TileSet. Useful for importing TileSets from Tiled
-# Returns an error code if fails
-func build_tileset(source_path, options):
 	var set = read_tileset_file(source_path)
 	if typeof(set) == TYPE_INT:
 		return set
@@ -857,43 +644,6 @@ func build_tileset(source_path, options):
 	set["firstgid"] = 0
 
 	return build_tileset_for_scene([set], source_path, options)
-
-# Loads an image from a given path
-# Returns a Texture
-func load_image(rel_path, source_path, options):
-	flags = options.image_flags if "image_flags" in options else Texture.FLAGS_DEFAULT
-	var embed = options.embed_internal_images if "embed_internal_images" in options else false
-
-	var ext = rel_path.get_extension().to_lower()
-	if ext != "png" and ext != "jpg":
-		print_error("Unsupported image format: %s. Use PNG or JPG instead." % [ext])
-		return ERR_FILE_UNRECOGNIZED
-
-	var total_path = rel_path
-	if rel_path.is_rel_path():
-		total_path = ProjectSettings.globalize_path(source_path.get_base_dir()).plus_file(rel_path)
-	total_path = ProjectSettings.localize_path(total_path)
-
-	var dir = Directory.new()
-	if not dir.file_exists(total_path):
-		print_error("Image not found: %s" % [total_path])
-		return ERR_FILE_NOT_FOUND
-
-	if not total_path.begins_with("res://"):
-		# External images need to be embedded
-		embed = true
-
-	var image = null
-	if embed:
-		image = ImageTexture.new()
-		image.load(total_path)
-	else:
-		image = ResourceLoader.load(total_path, "ImageTexture")
-
-	if image != null:
-		image.set_flags(flags)
-
-	return image
 
 # Reads a file and returns its contents as a dictionary
 # Returns an error code if fails
@@ -919,10 +669,6 @@ func read_file(path):
 		return content.error
 
 	return content.result
-
-# Reads a tileset file and return its contents as a dictionary
-# Returns an error code if fails
-func read_tileset_file(path):
 	if path.get_extension().to_lower() == "tsx":
 		var tmx_to_dict = XMLToDictionary.new()
 		var data = tmx_to_dict.read_tsx(path)
@@ -1132,145 +878,6 @@ func object_sorter(first, second):
 		return first.id < second.id
 	return first.y < second.y
 
-# Validates the map dictionary content for missing or invalid keys
-# Returns an error code
-func validate_map(map):
-	if not "type" in map or map.type != "map":
-		print_error("Missing or invalid type property.")
-		return ERR_INVALID_DATA
-	elif not "version" in map or int(map.version) != 1:
-		print_error("Missing or invalid map version.")
-		return ERR_INVALID_DATA
-	elif not "tileheight" in map or not str(map.tileheight).is_valid_integer():
-		print_error("Missing or invalid tileheight property.")
-		return ERR_INVALID_DATA
-	elif not "tilewidth" in map or not str(map.tilewidth).is_valid_integer():
-		print_error("Missing or invalid tilewidth property.")
-		return ERR_INVALID_DATA
-	elif not "layers" in map or typeof(map.layers) != TYPE_ARRAY:
-		print_error("Missing or invalid layers property.")
-		return ERR_INVALID_DATA
-	elif not "tilesets" in map or typeof(map.tilesets) != TYPE_ARRAY:
-		print_error("Missing or invalid tilesets property.")
-		return ERR_INVALID_DATA
-	if "orientation" in map and (map.orientation == "staggered" or map.orientation == "hexagonal"):
-		if not "staggeraxis" in map:
-			print_error("Missing stagger axis property.")
-			return ERR_INVALID_DATA
-		elif not "staggerindex" in map:
-			print_error("Missing stagger axis property.")
-			return ERR_INVALID_DATA
-	return OK
-
-# Validates the tileset dictionary content for missing or invalid keys
-# Returns an error code
-func validate_tileset(tileset):
-	if not "firstgid" in tileset or not str(tileset.firstgid).is_valid_integer():
-		print_error("Missing or invalid firstgid tileset property.")
-		return ERR_INVALID_DATA
-	elif not "tilewidth" in tileset or not str(tileset.tilewidth).is_valid_integer():
-		print_error("Missing or invalid tilewidth tileset property.")
-		return ERR_INVALID_DATA
-	elif not "tileheight" in tileset or not str(tileset.tileheight).is_valid_integer():
-		print_error("Missing or invalid tileheight tileset property.")
-		return ERR_INVALID_DATA
-	elif not "tilecount" in tileset or not str(tileset.tilecount).is_valid_integer():
-		print_error("Missing or invalid tilecount tileset property.")
-		return ERR_INVALID_DATA
-	if not "image" in tileset:
-		for tile in tileset.tiles:
-			if not "image" in tileset.tiles[tile]:
-				print_error("Missing or invalid image in tileset property.")
-				return ERR_INVALID_DATA
-			elif not "imagewidth" in tileset.tiles[tile] or not str(tileset.tiles[tile].imagewidth).is_valid_integer():
-				print_error("Missing or invalid imagewidth tileset property 1.")
-				return ERR_INVALID_DATA
-			elif not "imageheight" in tileset.tiles[tile] or not str(tileset.tiles[tile].imageheight).is_valid_integer():
-				print_error("Missing or invalid imageheight tileset property.")
-				return ERR_INVALID_DATA
-	else:
-		if not "imagewidth" in tileset or not str(tileset.imagewidth).is_valid_integer():
-			print_error("Missing or invalid imagewidth tileset property 2.")
-			return ERR_INVALID_DATA
-		elif not "imageheight" in tileset or not str(tileset.imageheight).is_valid_integer():
-			print_error("Missing or invalid imageheight tileset property.")
-			return ERR_INVALID_DATA
-	return OK
-
-# Validates the layer dictionary content for missing or invalid keys
-# Returns an error code
-func validate_layer(layer):
-	if not "type" in layer:
-		print_error("Missing or invalid type layer property.")
-		return ERR_INVALID_DATA
-	elif not "name" in layer:
-		print_error("Missing or invalid name layer property.")
-		return ERR_INVALID_DATA
-	match layer.type:
-		"tilelayer":
-			if not "height" in layer or not str(layer.height).is_valid_integer():
-				print_error("Missing or invalid layer height property.")
-				return ERR_INVALID_DATA
-			elif not "width" in layer or not str(layer.width).is_valid_integer():
-				print_error("Missing or invalid layer width property.")
-				return ERR_INVALID_DATA
-			elif not "data" in layer:
-				if not "chunks" in layer:
-					print_error("Missing data or chunks layer properties.")
-					return ERR_INVALID_DATA
-				elif typeof(layer.chunks) != TYPE_ARRAY:
-					print_error("Invalid chunks layer property.")
-					return ERR_INVALID_DATA
-			elif "encoding" in layer:
-				if layer.encoding == "base64" and typeof(layer.data) != TYPE_STRING:
-					print_error("Invalid data layer property.")
-					return ERR_INVALID_DATA
-				if layer.encoding != "base64" and typeof(layer.data) != TYPE_ARRAY:
-					print_error("Invalid data layer property.")
-					return ERR_INVALID_DATA
-			elif typeof(layer.data) != TYPE_ARRAY:
-				print_error("Invalid data layer property.")
-				return ERR_INVALID_DATA
-			if "compression" in layer:
-				if layer.compression != "gzip" and layer.compression != "zlib":
-					print_error("Invalid compression type.")
-					return ERR_INVALID_DATA
-		"imagelayer":
-			if not "image" in layer or typeof(layer.image) != TYPE_STRING:
-				print_error("Missing or invalid image path for layer.")
-				return ERR_INVALID_DATA
-		"objectgroup":
-			if not "objects" in layer or typeof(layer.objects) != TYPE_ARRAY:
-				print_error("Missing or invalid objects array for layer.")
-				return ERR_INVALID_DATA
-		"group":
-			if not "layers" in layer or typeof(layer.layers) != TYPE_ARRAY:
-				print_error("Missing or invalid layer array for group layer.")
-				return ERR_INVALID_DATA
-	return OK
-
-func validate_chunk(chunk):
-	if not "data" in chunk:
-		print_error("Missing data chunk property.")
-		return ERR_INVALID_DATA
-	elif not "height" in chunk or not str(chunk.height).is_valid_integer():
-		print_error("Missing or invalid height chunk property.")
-		return ERR_INVALID_DATA
-	elif not "width" in chunk or not str(chunk.width).is_valid_integer():
-		print_error("Missing or invalid width chunk property.")
-		return ERR_INVALID_DATA
-	elif not "x" in chunk or not str(chunk.x).is_valid_integer():
-		print_error("Missing or invalid x chunk property.")
-		return ERR_INVALID_DATA
-	elif not "y" in chunk or not str(chunk.y).is_valid_integer():
-		print_error("Missing or invalid y chunk property.")
-		return ERR_INVALID_DATA
-	return OK
-
-# Custom function to print error, to centralize the prefix addition
-func print_error(err):
-	printerr(error_prefix + err)
-
 func get_template(path):
 	# If this template has not yet been loaded
 	if not _loaded_templates.has(path):
@@ -1308,7 +915,7 @@ func get_template(path):
 			var object = result.object
 			if object.has("gid"):
 				if result.has("tileset"):
-					var ts_path = remove_filename_from_path(path) + result.tileset.source
+					var ts_path = Utils.remove_filename_from_path(path) + result.tileset.source
 					var tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
 					object.gid += tileset_gid_increment
 
@@ -1336,7 +943,7 @@ func parse_template(parser, path):
 
 		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
 			if parser.get_node_name() == "tileset":
-				var ts_path = remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
+				var ts_path = Utils.remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
 				tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
 				data.tileset = ts_path
 
@@ -1351,43 +958,6 @@ func parse_template(parser, path):
 		data["gid"] += tileset_gid_increment
 
 	return data
-
-func get_first_gid_from_tileset_path(path):
-	for t in _tileset_path_to_first_gid:
-		if is_same_file(path, t):
-			return _tileset_path_to_first_gid[t]
-
-	return 0
-
-static func get_filename_from_path(path):
-	var substrings = path.split("/", false)
-	var file_name = substrings[substrings.size() - 1]
-	return file_name
-
-static func remove_filename_from_path(path):
-	var file_name = get_filename_from_path(path)
-	var stringSize = path.length() - file_name.length()
-	var file_path = path.substr(0,stringSize)
-	return file_path
-
-static func is_same_file(path1, path2):
-	var file1 = File.new()
-	var err = file1.open(path1, File.READ)
-	if err != OK:
-		return err
-
-	var file2 = File.new()
-	err = file2.open(path2, File.READ)
-	if err != OK:
-		return err
-
-	var file1_str = file1.get_as_text()
-	var file2_str = file2.get_as_text()
-
-	if file1_str == file2_str:
-		return true
-
-	return false
 
 static func apply_template(object, template_immutable):
 	for k in template_immutable:

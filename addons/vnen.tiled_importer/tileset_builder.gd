@@ -30,6 +30,7 @@ const FLIPPED_VERTICALLY_FLAG   = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG   = 0x20000000
 
 const DataValidator = preload("data_validator.gd")
+const Utils = preload("utils.gd")
 # XML Format reader
 const XMLToDictionary = preload("xml_to_dict.gd")
 
@@ -38,6 +39,10 @@ const PolygonSorter = preload("polygon_sorter.gd")
 
 # Prefix for error messages, make easier to identify the source
 const error_prefix = "Tiled Importer: "
+
+# Custom function to print error, to centralize the prefix addition
+static func print_error(err):
+	printerr(error_prefix + err)
 
 # Properties to save the value in the metadata
 const whitelist_properties = [
@@ -610,7 +615,7 @@ func get_template(path):
 			var object = result.object
 			if object.has("gid"):
 				if result.has("tileset"):
-					var ts_path = remove_filename_from_path(path) + result.tileset.source
+					var ts_path = Utils.remove_filename_from_path(path) + result.tileset.source
 					var tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
 					object.gid += tileset_gid_increment
 
@@ -638,7 +643,7 @@ func parse_template(parser, path):
 
 		elif parser.get_node_type() == XMLParser.NODE_ELEMENT:
 			if parser.get_node_name() == "tileset":
-				var ts_path = remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
+				var ts_path = Utils.remove_filename_from_path(path) + parser.get_named_attribute_value_safe("source")
 				tileset_gid_increment = get_first_gid_from_tileset_path(ts_path) - 1
 				data.tileset = ts_path
 
@@ -656,40 +661,10 @@ func parse_template(parser, path):
 
 func get_first_gid_from_tileset_path(path):
 	for t in _tileset_path_to_first_gid:
-		if is_same_file(path, t):
+		if Utils.is_same_file(path, t):
 			return _tileset_path_to_first_gid[t]
 
 	return 0
-
-static func get_filename_from_path(path):
-	var substrings = path.split("/", false)
-	var file_name = substrings[substrings.size() - 1]
-	return file_name
-
-static func remove_filename_from_path(path):
-	var file_name = get_filename_from_path(path)
-	var stringSize = path.length() - file_name.length()
-	var file_path = path.substr(0,stringSize)
-	return file_path
-
-static func is_same_file(path1, path2):
-	var file1 = File.new()
-	var err = file1.open(path1, File.READ)
-	if err != OK:
-		return err
-
-	var file2 = File.new()
-	err = file2.open(path2, File.READ)
-	if err != OK:
-		return err
-
-	var file1_str = file1.get_as_text()
-	var file2_str = file2.get_as_text()
-
-	if file1_str == file2_str:
-		return true
-
-	return false
 
 static func apply_template(object, template_immutable):
 	for k in template_immutable:
