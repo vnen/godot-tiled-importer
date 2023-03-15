@@ -91,6 +91,8 @@ func get_option_visibility(option, options):
 func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var builder = TileSetBuilder.new()
 
+	options.apply_offset = false
+
 	var tileset = builder.build(source_file, options)
 
 	if typeof(tileset) != TYPE_OBJECT:
