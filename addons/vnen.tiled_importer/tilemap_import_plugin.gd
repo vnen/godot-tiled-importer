@@ -108,7 +108,7 @@ func import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var builder = TileMapBuilder.new()
 
 	# Offset is only optional for importing TileSets
-	options.apply_offset = true
+	options.apply_offset = false
 	var scene = builder.build(source_file, options)
 
 	if typeof(scene) != TYPE_OBJECT:
