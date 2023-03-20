@@ -1,12 +1,17 @@
-# Everything except the addon itself and doc files
+# Everything except the addon itself, test project and doc files
 /*
 /*/
 !/addons/vnen.tiled_importer/
+!/test/
 !README.md
 !LICENSE
 !CONTRIBUTORS.md
 !.gitignore
 !.gitattributes
+!.default_env.tres
+!icon.png
+!icon.png.import
+!project.godot
 # Godot generated files
 /.import/*
 *.import
